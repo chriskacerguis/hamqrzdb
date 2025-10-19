@@ -1,1186 +1,520 @@
-# HamQRZDB# HamQRZDB
+# HamQRZDB
 
+A high-performance, self-hosted amateur radio callsign lookup system with a HamDB-compatible JSON API.
 
+Built with **Go** for speed and efficiency. Processes FCC ULS data into SQLite and serves it via a fast HTTP API with case-insensitive lookups and CORS support.
 
-A high-performance, self-hosted amateur radio callsign lookup system with a HamDB-compatible JSON API.A high-performance, self-hosted amateur radio callsign lookup system with a HamDB-compatible JSON API.
+## Features
 
-
-
-Built with **Go** for speed and efficiency. Processes FCC ULS data into SQLite and serves it via a fast HTTP API with case-insensitive lookups and CORS support.Built with **Go** for speed and efficiency. Processes FCC ULS data into SQLite and serves it via a fast HTTP API with case-insensitive lookups and CORS support.
-
-
-
-## Features## Table of Contents
-
-
-
-- 🚀 **HamDB-compatible API** - Drop-in replacement for HamDB lookups- [Features](#features)
-
-- ⚡ **Blazing Fast** - ~2ms average response time, ~2,500 req/s throughput- [Architecture](#architecture)
-
-- 🎯 **Case-insensitive** - Works with any callsign case (KJ5DJC = kj5djc)- [Quick Start](#quick-start)
-
-- 💾 **SQLite Storage** - Single-file database (~500MB for 1.5M callsigns)- [Prerequisites](#prerequisites)
-
-- 🔧 **Modern Tooling** - Uses [Task](https://taskfile.dev) for build automation- [Installation](#installation)
-
-- 📦 **Docker Ready** - Simple containerized deployment- [Usage](#usage)
-
-- 🔄 **Fast Updates** - Daily updates in ~30 seconds, full rebuild in 3-5 minutes- [API Format](#api-format)
-
-- 📍 **Location Data** - Coordinates and Maidenhead grid squares- [Docker Deployment](#docker-deployment)
-
-- 🌐 **CORS Enabled** - Ready for web applications- [Automation](#automation)
-
-- 📊 **Low Memory** - ~100MB RAM usage- [Performance](#performance)
-
-- [Task Commands](#task-commands)
-
-## Architecture- [Troubleshooting](#troubleshooting)
-
-- [License](#license)
-
-**Simple 3-component system:**- [Credits](#credits)
-
-
-
-1. **hamqrzdb-process** - Downloads FCC ULS data and populates SQLite database## Features
-
-2. **hamqrzdb-locations** - Adds coordinates and Maidenhead grid squares (optional)
-
-3. **hamqrzdb-api** - HTTP server that queries SQLite directly- 🚀 **HamDB-compatible API** - Drop-in replacement for HamDB lookups
-
-- ⚡ **High Performance** - Go-based tools are 4-5x faster than Python equivalents
-
-```- 💾 **SQLite database** - Efficient storage with ~50-100MB RAM usage
-
-FCC Data → hamqrzdb-process → SQLite DB → hamqrzdb-api → JSON API- � **Modern Tooling** - Uses [Task](https://taskfile.dev) for build automation
-
-                                    ↑- �📦 **Docker deployment** - Simple setup with containerized deployment
-
-                          hamqrzdb-locations (optional)- 🔄 **Incremental updates** - Daily updates without full rebuilds
-
-```- 📍 **Location data** - Coordinates and Maidenhead grid squares
-
-- ⚡ **Zero-downtime updates** - Changes are instant with bind mounts
-
-No JSON file generation needed. The API queries the database directly for real-time, zero-downtime updates.- 🌐 **CORS enabled** - Ready for web applications
-
-- 🎯 **Case-insensitive lookups** - Works with any callsign case
-
-## Quick Start
+- 🚀 **HamDB-compatible API** - Drop-in replacement for HamDB lookups
+- ⚡ **Blazing Fast** - ~2ms average response time, ~2,500 req/s throughput
+- 🎯 **Case-insensitive** - Works with any callsign case (KJ5DJC = kj5djc)
+- 💾 **SQLite Storage** - Single-file database (~500MB for 1.5M callsigns)
+- 🔧 **Modern Tooling** - Uses [Task](https://taskfile.dev) for build automation
+- 📦 **Docker Ready** - Simple containerized deployment
+- 🔄 **Fast Updates** - Daily updates in ~30 seconds, full rebuild in 3-5 minutes
+- 📍 **Location Data** - Coordinates and Maidenhead grid squares
+- 🌐 **CORS Enabled** - Ready for web applications
+- 📊 **Low Memory** - ~100MB RAM usage
 
 ## Architecture
 
-```bash
+**Simple 3-component system:**
 
-# 1. Install Task (if needed)### Go-based Tools (Recommended)
-
-brew install go-task/tap/go-task  # macOS
-
-# or see https://taskfile.dev/installation/1. **hamqrzdb-process** - Go CLI for downloading FCC ULS data and populating SQLite
-
-2. **hamqrzdb-locations** - Go CLI for adding coordinates and Maidenhead grid squares
-
-# 2. Clone and build3. **hamqrzdb-api** - Go HTTP server with case-insensitive lookups and CORS support
-
-git clone https://github.com/chriskacerguis/hamqrzdb.git4. **SQLite Database** - Single-file database (~500MB for full dataset)
-
-cd hamqrzdb5. **Task** - Modern build tool for automation
-
-task build
-
-### Legacy Python Tools (Still supported)
-
-# 3. Process FCC data (3-5 minutes)
-
-task db:full1. **process_uls_db.py** - Python script for data processing (slower but works)
-
-2. **process_uls_locations.py** - Python script for location processing
-
-# 4. Optional: Add location data3. **nginx** (Docker) - Serves static JSON files with URL rewriting
-
-task db:locations -- --la-file temp_uls/LA.dat
-
-> [!TIP]
-
-# 5. Start API server> The Go tools are **4-5x faster** and use **5x less memory** than Python equivalents. They're recommended for production use.
-
-task dev:api
-
-> [!NOTE]
-
-# 6. Test it!> Consider using Cloudflare or another CDN in front for production deployments.
-
-curl http://localhost:8080/v1/KJ5DJC/json/test
-
-curl http://localhost:8080/v1/kj5djc/json/test  # case-insensitive!## Quick Start
+1. **hamqrzdb-process** - Downloads FCC ULS data and populates SQLite database
+2. **hamqrzdb-locations** - Adds coordinates and Maidenhead grid squares (optional)
+3. **hamqrzdb-api** - HTTP server that queries SQLite directly
 
 ```
+FCC Data → hamqrzdb-process → SQLite DB → hamqrzdb-api → JSON API
+                                    ↑
+                          hamqrzdb-locations (optional)
+```
 
-### Using Go Tools (Recommended)
+No JSON file generation needed. The API queries the database directly for real-time, zero-downtime updates.
+
+## Quick Start
+
+```bash
+# 1. Install Task (if needed)
+brew install go-task/tap/go-task  # macOS
+# or see https://taskfile.dev/installation/
+
+# 2. Clone and build
+git clone https://github.com/chriskacerguis/hamqrzdb.git
+cd hamqrzdb
+task build
+
+# 3. Process FCC data (3-5 minutes)
+task db:full
+
+# 4. Optional: Add location data
+task db:locations -- --la-file temp_uls/LA.dat
+
+# 5. Start API server
+task dev:api
+
+# 6. Test it!
+curl http://localhost:8080/v1/KJ5DJC/json/test
+curl http://localhost:8080/v1/kj5djc/json/test  # case-insensitive!
+```
 
 ## Prerequisites
 
-```bash
-
-- **Go 1.21+** (with CGO support for SQLite)# 1. Build the tools
-
-- **Task** - Modern task runner ([installation](https://taskfile.dev/installation/))task build
-
+- **Go 1.21+** (with CGO support for SQLite)
+- **Task** - Modern task runner ([installation](https://taskfile.dev/installation/))
 - **~2GB disk space** for full dataset
-
-- **gcc/clang** for SQLite (usually pre-installed on macOS/Linux)# 2. Process the full FCC database (3-5 minutes)
-
-task db:full
+- **gcc/clang** for SQLite (usually pre-installed on macOS/Linux)
 
 ## Installation
 
-# 3. Optional: Add location data
-
-```bashtask db:locations -- --la-file temp_uls/LA.dat
-
+```bash
 # Clone repository
+git clone https://github.com/chriskacerguis/hamqrzdb.git
+cd hamqrzdb
 
-git clone https://github.com/chriskacerguis/hamqrzdb.git# 4. Start the API server
+# Install Task (macOS)
+brew install go-task/tap/go-task
 
-cd hamqrzdbtask dev:api
-
-
-
-# Install Task (macOS)# 5. Test it (case-insensitive!)
-
-brew install go-task/tap/go-taskcurl http://localhost:8080/v1/KJ5DJC/json/test
-
-curl http://localhost:8080/v1/kj5djc/json/test
-
-# Install Task (Linux)```
-
+# Install Task (Linux)
 sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d
 
-### Using Python Tools (Legacy)
-
 # Install Task (or with Go)
+go install github.com/go-task/task/v3/cmd/task@latest
 
-go install github.com/go-task/task/v3/cmd/task@latest```bash
-
-# 1. Process the full FCC database (15-20 minutes)
-
-# Build all toolspython3 process_uls_db.py --full
-
+# Build all tools
 task build
 
-# 2. Optional: Add location data
-
-# Optional: Install system-widepython3 process_uls_locations.py --la-file temp_uls/LA.dat --regenerate
-
+# Optional: Install system-wide
 task install  # Installs to /usr/local/bin
-
-```# 3. Start the nginx server
-
-docker-compose up -d
+```
 
 ## Usage
 
-# 4. Test it
-
-### Processing FCC Datacurl http://localhost/v1/KJ5DJC/json/test
-
-```
+### Processing FCC Data
 
 ```bash
-
-# Download and process full database (3-5 minutes)See [README.cli.md](docs/README.cli.md) for complete Go CLI reference, or [DOCKER.md](DOCKER.md) for nginx deployment guide.
-
+# Download and process full database (3-5 minutes)
 task db:full
 
-## Prerequisites
-
 # Or use binary directly
-
-./bin/hamqrzdb-process --full### For Go Tools (Recommended)
-
-- Go 1.21+ (with CGO support for SQLite)
-
-# Process daily updates (30 seconds)- [Task](https://taskfile.dev) - `brew install go-task/tap/go-task`
-
-task db:daily- ~2GB disk space for full dataset
-
-
-
-# Process single callsign (for testing)### For Python Tools (Legacy)
-
-./bin/hamqrzdb-process --full --callsign KJ5DJC- Python 3.7+
-
-- Docker and Docker Compose (optional)
-
-# Custom database path- ~2GB disk space for full dataset
-
-./bin/hamqrzdb-process --full --db /path/to/custom.db
-
-```## Installation
-
-
-
-### Adding Location Data (Optional)```bash
-
-# Clone the repository
-
-Location data adds latitude, longitude, and Maidenhead grid squares:git clone https://github.com/chriskacerguis/hamqrzdb.git
-
-cd hamqrzdb
-
-```bash
-
-# Process location data (2-3 minutes)# Install Task (if not already installed)
-
-task db:locations -- --la-file temp_uls/LA.datbrew install go-task/tap/go-task  # macOS
-
-# or see https://taskfile.dev/installation/
-
-# Or use binary directly
-
-./bin/hamqrzdb-locations --la-file temp_uls/LA.dat --db hamqrzdb.sqlite# Install Go dependencies
-
-task deps
-
-# Process single callsign
-
-./bin/hamqrzdb-locations --la-file temp_uls/LA.dat --callsign KJ5DJC# Build all tools
-
-```task build
-
-
-
-**Note:** The full database download includes LA.dat in the `temp_uls/` directory.# Optional: Install system-wide
-
-task install  # Installs to /usr/local/bin
-
-### Running the API Server```
-
-
-
-```bash## Usage
-
-# Development mode (default: localhost:8080)
-
-task dev:api### Initial Database Setup
-
-
-
-# Or run binary directly#### Using Go Tools (Fast - 3-5 minutes)
-
-./bin/hamqrzdb-api
-
-**Full database load** (processes all 1.5M callsigns):
-
-# Custom configuration
-
-DB_PATH=./hamqrzdb.sqlite PORT=8080 ./bin/hamqrzdb-api```bash
-
-task db:full
-
-# Production mode (with Docker)```
-
-task docker:up
-
-```**Or using the binary directly:**
-
-
-
-### Database Statistics```bash
-
 ./bin/hamqrzdb-process --full
 
-```bash```
+# Process daily updates (30 seconds)
+task db:daily
 
-# Show database stats
+# Process single callsign (for testing)
+./bin/hamqrzdb-process --full --callsign KJ5DJC
 
-task db:stats**Single callsign** (for testing):
+# Custom database path
+./bin/hamqrzdb-process --full --db /path/to/custom.db
+```
 
-
-
-# Output:```bash
-
-# 📊 Database statistics:./bin/hamqrzdb-process --full --callsign KJ5DJC
-
-# 1234567 total callsigns```
-
-# 1098765 active licenses
-
-# 987654 with locations#### Using Python Tools (Slower - 15-20 minutes)
-
-# Last updated: 2025-10-19 12:34:56
-
-``````bash
-
-python3 process_uls_db.py --full
-
-## API Format```
-
-
-
-### Endpoint**What happens:**
-
-1. Downloads the complete ULS amateur radio database (~500MB ZIP)
-
-```2. Extracts HD.dat, EN.dat, and AM.dat files
-
-GET /v1/{callsign}/json/{appname}3. Loads data into SQLite database (`hamqrzdb.sqlite`)
-
-```4. Optionally generates 1.5M JSON files in nested directory structure
-
-
-
-- `{callsign}` - Amateur radio callsign (case-insensitive)### Add Location Data (Optional)
-
-- `{appname}` - Your application name (for compatibility, not validated)
+### Adding Location Data (Optional)
 
 Location data adds latitude, longitude, and Maidenhead grid squares:
 
-### Examples
+```bash
+# Process location data (2-3 minutes)
+task db:locations -- --la-file temp_uls/LA.dat
 
-#### Using Go Tools (Fast - 2-3 minutes)
+# Or use binary directly
+./bin/hamqrzdb-locations --la-file temp_uls/LA.dat --db hamqrzdb.sqlite
+
+# Process single callsign
+./bin/hamqrzdb-locations --la-file temp_uls/LA.dat --callsign KJ5DJC
+```
+
+**Note:** The full database download includes LA.dat in the `temp_uls/` directory.
+
+### Running the API Server
 
 ```bash
+# Development mode (default: localhost:8080)
+task dev:api
 
-# Valid callsign (both work!)```bash
+# Or run binary directly
+./bin/hamqrzdb-api
 
-curl http://localhost:8080/v1/KJ5DJC/json/myapp# Process location data from LA.dat
+# Custom configuration
+DB_PATH=./hamqrzdb.sqlite PORT=8080 ./bin/hamqrzdb-api
 
-curl http://localhost:8080/v1/kj5djc/json/myapptask db:locations -- --la-file temp_uls/LA.dat
-
-
-
-# Invalid callsign (returns NOT_FOUND response)# Or use the binary directly
-
-curl http://localhost:8080/v1/BADCALL/json/test./bin/hamqrzdb-locations --la-file temp_uls/LA.dat --db hamqrzdb.sqlite
-
+# Production mode (with Docker)
+task docker:up
 ```
 
-# Health check
-
-curl http://localhost:8080/health#### Using Python Tools (Slower - 8-10 minutes)
-
-```
+### Database Statistics
 
 ```bash
+# Show database stats
+task db:stats
 
-### Response Format# Download full database if not already done
-
-python3 process_uls_db.py --full
-
-**Valid Callsign (HTTP 200):**
-
-```json# Process location data and regenerate JSON files
-
-{python3 process_uls_locations.py --la-file temp_uls/LA.dat --regenerate
-
-  "hamdb": {```
-
-    "version": "1",
-
-    "callsign": {**Note:** The full database download includes LA.dat in `temp_uls/` directory.
-
-      "call": "KJ5DJC",
-
-      "class": "G",### Generate JSON Files from Database
-
-      "expires": "11/18/2033",
-
-      "status": "A",If you already have the database loaded and just need to regenerate JSON files:
-
-      "grid": "EM10ci",
-
-      "lat": "30.3416503",#### Using Go Tools
-
-      "lon": "-97.7548379",
-
-      "fname": "CHRIS",```bash
-
-      "mi": "",task db:generate
-
-      "name": "KACERGUIS",
-
-      "suffix": "",# Or use the binary directly
-
-      "addr1": "5900 Balcones Drive STE 26811",./bin/hamqrzdb-process --generate --db hamqrzdb.sqlite --output output
-
-      "addr2": "AUSTIN",```
-
-      "state": "TX",
-
-      "zip": "78731",#### Using Python Tools
-
-      "country": "United States"
-
-    },```bash
-
-    "messages": {# Generate all JSON files
-
-      "status": "OK"python3 process_uls_db.py --generate
-
-    }
-
-  }# Generate single callsign
-
-}python3 process_uls_db.py --generate --callsign KJ5DJC
-
-``````
-
-
-
-**Invalid Callsign (HTTP 200):**> [!NOTE]
-
-```json> JSON file generation is optional when using the Go API server, which queries SQLite directly.
-
-{
-
-  "hamdb": {### Daily Updates
-
-    "version": "1",
-
-    "callsign": {Update with daily changes from FCC (incremental):
-
-      "call": "NOT_FOUND",
-
-      "class": "NOT_FOUND",#### Using Go Tools (Fast - 30 seconds)
-
-      ...
-
-    },```bash
-
-    "messages": {task db:daily
-
-      "status": "NOT_FOUND"
-
-    }# Or use the binary directly
-
-  }./bin/hamqrzdb-process --daily --db hamqrzdb.sqlite
-
-}```
-
+# Output:
+# 📊 Database statistics:
+# 1234567 total callsigns
+# 1098765 active licenses
+# 987654 with locations
+# Last updated: 2025-10-19 12:34:56
 ```
-
-#### Using Python Tools (Slower - 2-3 minutes)
-
-Both responses return **HTTP 200** for client compatibility.
-
-```bash
-
-## Docker Deployment# Using database scripts (recommended)
-
-./update-daily-db.sh
-
-### Using Docker Compose
-
-# Or manually
-
-```bashpython3 process_uls_db.py --daily
-
-# Build and start services```
-
-task docker:build
-
-task docker:up**Daily updates:**
-
-- Download only today's changes (~1-5MB)
-
-# Or use docker-compose directly- Upsert changes into database
-
-docker-compose up -d- Optionally regenerate affected JSON files
-
-- Much faster than full rebuild
-
-# View logs
-
-task docker:logs### Weekly Full Rebuild
-
-
-
-# Stop servicesRebuild the entire database from scratch:
-
-task docker:down
-
-``````bash
-
-# Using database script (recommended)
-
-### Manual Docker Build./update-weekly-db.sh
-
-
-
-```bash# Manual
-
-# Build imagerm hamqrzdb.sqlite
-
-docker build -t hamqrzdb-api:latest .python3 process_uls_db.py --full
-
-```
-
-# Run container
-
-docker run -d \## File Structure
-
-  -p 8080:8080 \
-
-  -v $(pwd)/hamqrzdb.sqlite:/app/hamqrzdb.sqlite \The script creates a nested directory structure to avoid too many files in one directory:
-
-  --name hamqrzdb-api \
-
-  hamqrzdb-api:latest```
-
-```output/
-
-├── K/
-
-The API server runs on port 8080 by default. The database is bind-mounted for zero-downtime updates.│   └── J/
-
-│       └── 5/
-
-## Automation│           └── KJ5DJC.json
-
-├── W/
-
-### Cron Jobs│   └── 1/
-
-│       └── A/
-
-```bash│           └── W1AW.json
-
-# Create logs directory...
-
-mkdir -p logs```
-
-
-
-# Edit crontab## JSON Output Format
-
-crontab -e
-
-Each JSON file follows this structure:
-
-# Daily updates at 2 AM (30 seconds)
-
-0 2 * * * cd /path/to/hamqrzdb && task db:daily >> logs/cron.log 2>&1```json
-
-{
-
-# Weekly full rebuild on Sunday at 3 AM (3-5 minutes)  "hamdb": {
-
-0 3 * * 0 cd /path/to/hamqrzdb && task db:full >> logs/cron.log 2>&1    "version": "1",
-
-    "callsign": {
-
-# Update locations monthly (2-3 minutes)      "call": "KJ5DJC",
-
-0 4 1 * * cd /path/to/hamqrzdb && task db:locations -- --la-file temp_uls/LA.dat >> logs/cron.log 2>&1      "class": "G",
-
-```      "expires": "11/18/2033",
-
-      "status": "A",
-
-Database changes are live immediately - no API server restart needed!      "grid": "EM10ci",
-
-      "lat": "30.3416503",
-
-### Systemd Service      "lon": "-97.7548379",
-
-      "fname": "CHRIS",
-
-Create `/etc/systemd/system/hamqrzdb-api.service`:      "mi": "",
-
-      "name": "KACERGUIS",
-
-```ini      "suffix": "",
-
-[Unit]      "addr1": "5900 Balcones Drive STE 26811",
-
-Description=HamQRZDB API Server      "addr2": "AUSTIN",
-
-After=network.target      "state": "TX",
-
-      "zip": "78731",
-
-[Service]      "country": "United States"
-
-Type=simple    },
-
-User=hamqrzdb    "messages": {
-
-WorkingDirectory=/opt/hamqrzdb      "status": "OK"
-
-Environment="DB_PATH=/opt/hamqrzdb/hamqrzdb.sqlite"    }
-
-Environment="PORT=8080"  }
-
-ExecStart=/usr/local/bin/hamqrzdb-api}
-
-Restart=always```
-
-RestartSec=10
 
 ## API Format
 
-[Install]
-
-WantedBy=multi-user.target### Endpoint
+### Endpoint
 
 ```
-
+GET /v1/{callsign}/json/{appname}
 ```
 
-Enable and start:GET /v1/{callsign}/json/{appname}
+- `{callsign}` - Amateur radio callsign (case-insensitive)
+- `{appname}` - Your application name (for compatibility, not validated)
 
-```
+### Examples
 
 ```bash
+# Valid callsign (both work!)
+curl http://localhost:8080/v1/KJ5DJC/json/myapp
+curl http://localhost:8080/v1/kj5djc/json/myapp
 
-sudo systemctl enable hamqrzdb-api- `{callsign}` - Amateur radio callsign (e.g., KJ5DJC, W1AW)
+# Invalid callsign (returns NOT_FOUND response)
+curl http://localhost:8080/v1/BADCALL/json/test
 
-sudo systemctl start hamqrzdb-api- `{appname}` - Your application name (required for compatibility, not used)
+# Health check
+curl http://localhost:8080/health
+```
 
-sudo systemctl status hamqrzdb-api
+### Response Format
 
-```### Examples
-
-
-
-## Performance```bash
-
-# Valid callsign
-
-### Benchmarkscurl http://localhost/v1/KJ5DJC/json/myapp
-
-curl https://lookup.kj5djc.com/v1/KJ5DJC/json/hamdb
-
-| Operation | Time | Notes |
-
-|-----------|------|-------|# Invalid callsign (returns NOT_FOUND response)
-
-| Full database load | 3-5 min | 1.5M callsigns |curl http://localhost/v1/BADCALL/json/test
-
-| Daily updates | ~30 sec | Incremental changes |
-
-| Location processing | 2-3 min | All callsigns |# Health check
-
-| API response time | ~2ms | Average (p50) |curl http://localhost/health
-
-| API response time | <50ms | p99 |```
-
-| API throughput | ~2,500 req/s | Single instance |
-
-| Memory usage | ~100MB | API server |### Response Format
-
-| Database size | ~500MB | 1.5M callsigns |
-
-**Valid Callsign:**
-
-### Comparison to Python```json
-
-{
-
-- **4-5x faster** data processing  "hamdb": {
-
-- **5x less memory** usage    "version": "1",
-
-- **50x faster** API responses    "callsign": {
-
-- **Single binary** deployment (no dependencies)      "call": "KJ5DJC",
-
-      "class": "G",
-
-## Task Commands      ...
-
-    },
-
-Quick reference for common operations:    "messages": {
-
-      "status": "OK"
-
-```bash    }
-
-# Build commands  }
-
-task build              # Build all binaries}
-
-task build:api          # Build API server only```
-
-task build:process      # Build data processor only
-
-task build:locations    # Build locations processor only**Invalid Callsign (NOT_FOUND):**
-
+**Valid Callsign (HTTP 200):**
 ```json
-
-# Development{
-
-task dev:api                              # Run API server  "hamdb": {
-
-task dev:process -- --full                # Run data processor    "version": "1",
-
-task dev:locations -- --la-file LA.dat    # Run locations processor    "callsign": {
-
-      "call": "NOT_FOUND",
-
-# Database operations      "class": "NOT_FOUND",
-
-task db:full            # Download and process full database      ...
-
-task db:daily           # Process daily updates    },
-
-task db:locations       # Process location data    "messages": {
-
-task db:stats           # Show database statistics      "status": "NOT_FOUND"
-
+{
+  "hamdb": {
+    "version": "1",
+    "callsign": {
+      "call": "KJ5DJC",
+      "class": "G",
+      "expires": "11/18/2033",
+      "status": "A",
+      "grid": "EM10ci",
+      "lat": "30.3416503",
+      "lon": "-97.7548379",
+      "fname": "CHRIS",
+      "mi": "",
+      "name": "KACERGUIS",
+      "suffix": "",
+      "addr1": "5900 Balcones Drive STE 26811",
+      "addr2": "AUSTIN",
+      "state": "TX",
+      "zip": "78731",
+      "country": "United States"
+    },
+    "messages": {
+      "status": "OK"
     }
+  }
+}
+```
 
-# Docker operations  }
+**Invalid Callsign (HTTP 200):**
+```json
+{
+  "hamdb": {
+    "version": "1",
+    "callsign": {
+      "call": "NOT_FOUND",
+      "class": "NOT_FOUND",
+      ...
+    },
+    "messages": {
+      "status": "NOT_FOUND"
+    }
+  }
+}
+```
 
-task docker:build       # Build Docker image}
+Both responses return **HTTP 200** for client compatibility.
 
-task docker:up          # Start services```
+## Docker Deployment
 
-task docker:down        # Stop services
-
-task docker:logs        # View logsBoth return **HTTP 200** for client compatibility.
-
-
-
-# Utility### Features
-
-task clean              # Remove build artifacts
-
-task install            # Install to /usr/local/bin- **Always returns HTTP 200** - Even for invalid callsigns (client compatibility)
-
-task test               # Run tests- **Case-insensitive** - Works with any callsign case (Go API only)
-
-task help               # Show detailed help- **CORS enabled** - `Access-Control-Allow-Origin: *`
-
-task --list             # List all available tasks- **Compressed responses** - gzip enabled for JSON
-
-```- **Fast responses** - <2ms with Go API, <10ms with nginx
-
-
-
-See [docs/TASKFILE-MIGRATION.md](docs/TASKFILE-MIGRATION.md) for migration guide from Makefile.## Running the API Server
-
-
-
-## Project Structure### Using Go API Server (Recommended)
-
-
-
-```The Go API server queries SQLite directly - no JSON files needed!
-
-hamqrzdb/
-
-├── main.go                   # API server source```bash
-
-├── cmd/# Start the API server (development)
-
-│   ├── process/main.go       # Data processor sourcetask dev:api
-
-│   └── locations/main.go     # Locations processor source
-
-├── bin/                      # Compiled binaries# Or run the binary directly
-
-│   ├── hamqrzdb-api./bin/hamqrzdb-api
-
-│   ├── hamqrzdb-process
-
-│   └── hamqrzdb-locations# Custom configuration
-
-├── Taskfile.yml              # Task automation configurationDB_PATH=./hamqrzdb.sqlite PORT=8080 ./bin/hamqrzdb-api
-
-├── Dockerfile                # Docker image definition```
-
-├── docker-compose.yml        # Docker Compose configuration
-
-├── hamqrzdb.sqlite           # SQLite database (generated)**Benefits:**
-
-├── temp_uls/                 # Downloaded FCC data (temporary)- ⚡ **50x faster** than Python http.server (~2,500 req/s vs ~50 req/s)
-
-└── docs/                     # Documentation- 🎯 **Case-insensitive** lookups (KJ5DJC = kj5djc)
-
-    ├── README.cli.md         # CLI tools reference- 💾 **No JSON files** needed (queries SQLite directly)
-
-    ├── TASKFILE-MIGRATION.md # Makefile→Task migration guide- 🔄 **Real-time updates** (database changes are instant)
-
-    ├── LOCATIONS.md          # Locations processor guide- 🌐 **Built-in CORS** support
-
-    └── QUICKREF.md           # Quick reference card
-
-```### Using nginx (Static Files)
-
-
-
-## DocumentationIf you prefer serving static JSON files with nginx:
-
-
-
-- **[README.cli.md](docs/README.cli.md)** - Complete CLI reference for all tools## Docker Deployment
-
-- **[TASKFILE-MIGRATION.md](docs/TASKFILE-MIGRATION.md)** - Migration guide from Makefile
-
-- **[LOCATIONS.md](docs/LOCATIONS.md)** - Locations processor detailed guideStart the nginx server to serve the JSON files:
-
-- **[QUICKREF.md](docs/QUICKREF.md)** - Quick reference card for common operations
+### Using Docker Compose
 
 ```bash
+# Build and start services
+task docker:build
+task docker:up
 
-## Troubleshooting# Start service
-
+# Or use docker-compose directly
 docker-compose up -d
 
-### Build Errors
-
 # View logs
+task docker:logs
 
-**Error: `CGO_ENABLED` required for SQLite**docker-compose logs -f
+# Stop services
+task docker:down
+```
 
+### Manual Docker Build
 
+```bash
+# Build image
+docker build -t hamqrzdb-api:latest .
 
-Solution: Make sure you have a C compiler installed:# Stop service
+# Run container
+docker run -d \
+  -p 8080:8080 \
+  -v $(pwd)/hamqrzdb.sqlite:/app/hamqrzdb.sqlite \
+  --name hamqrzdb-api \
+  hamqrzdb-api:latest
+```
 
-docker-compose down
+The API server runs on port 8080 by default. The database is bind-mounted for zero-downtime updates.
 
-```bash```
+## Automation
 
-# macOS
+### Cron Jobs
 
-xcode-select --installThe service runs on port 80 by default. Edit `docker-compose.yml` to change the port.
-
-
-
-# Ubuntu/Debian## Automation
-
-sudo apt-get install build-essential
-
-### Using Task (Go Tools)
-
-# Fedora/RHEL
-
-sudo dnf install gcc```bash
-
-```# Create logs directory
-
+```bash
+# Create logs directory
 mkdir -p logs
 
-### Database Errors
+# Edit crontab
+crontab -e
 
-# Add to crontab
-
-**Error: Database locked**crontab -e
-
-
-
-Solution: Close any other connections to the database:# Daily updates at 2 AM (fast - 30 seconds)
-
+# Daily updates at 2 AM (30 seconds)
 0 2 * * * cd /path/to/hamqrzdb && task db:daily >> logs/cron.log 2>&1
 
-```bash
+# Weekly full rebuild on Sunday at 3 AM (3-5 minutes)
+0 3 * * 0 cd /path/to/hamqrzdb && task db:full >> logs/cron.log 2>&1
 
-# Find processes using the database# Weekly full rebuild on Sunday at 3 AM (fast - 3-5 minutes)
-
-lsof hamqrzdb.sqlite0 3 * * 0 cd /path/to/hamqrzdb && task db:full >> logs/cron.log 2>&1
-
+# Update locations monthly (2-3 minutes)
+0 4 1 * * cd /path/to/hamqrzdb && task db:locations -- --la-file temp_uls/LA.dat >> logs/cron.log 2>&1
 ```
 
-# Kill the process if needed
+Database changes are live immediately - no API server restart needed!
 
-kill <PID>### Using Shell Scripts (Legacy)
+### Systemd Service
 
+Create `/etc/systemd/system/hamqrzdb-api.service`:
+
+```ini
+[Unit]
+Description=HamQRZDB API Server
+After=network.target
+
+[Service]
+Type=simple
+User=hamqrzdb
+WorkingDirectory=/opt/hamqrzdb
+Environment="DB_PATH=/opt/hamqrzdb/hamqrzdb.sqlite"
+Environment="PORT=8080"
+ExecStart=/usr/local/bin/hamqrzdb-api
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-With Docker bind mounts, updates are instant and don't require container restarts:
-
-**Error: Database corrupted**
+Enable and start:
 
 ```bash
-
-Solution: Rebuild from scratch:# Daily updates at 2 AM (slower - 2-3 minutes)
-
-0 2 * * * cd /path/to/hamqrzdb && ./update-daily-db.sh >> logs/cron.log 2>&1
-
-```bash
-
-# Backup current database# Weekly full rebuild on Sunday at 3 AM (slower - 15-20 minutes)
-
-cp hamqrzdb.sqlite hamqrzdb.sqlite.backup0 3 * * 0 cd /path/to/hamqrzdb && ./update-weekly-db.sh >> logs/cron.log 2>&1
-
+sudo systemctl enable hamqrzdb-api
+sudo systemctl start hamqrzdb-api
+sudo systemctl status hamqrzdb-api
 ```
 
-# Remove and rebuild
-
-rm hamqrzdb.sqlite hamqrzdb.sqlite-*Changes are live immediately - no container restart needed!
-
-task db:full
-
-```### Included Scripts
-
-
-
-### Download Errors**Database scripts (recommended):**
-
-- `update-daily-db.sh` - Daily incremental updates with database upserts
-
-**Error: Daily file not available**- `update-weekly-db.sh` - Weekly full rebuild with automatic backup
-
-- `regenerate-json-db.sh` - Regenerate all JSON files from existing database
-
-Solution: Daily files may not be available on weekends/holidays. Use full database instead:
-
-**Legacy scripts:**
-
-```bash- `update-daily.sh` - Daily updates (direct file processing, deprecated)
-
-task db:full- `update-weekly.sh` - Weekly rebuild (direct file processing, deprecated)
-
-```
-
-## Performance Notes
-
-**Error: Download failed**
-
-### Go Tools (Recommended)
-
-Solution: Check FCC website status and try again:
-
-- **Processing Speed**: 4-5x faster than Python (3-5 min vs 15-20 min full load)
-
-- https://www.fcc.gov/uls/transactions/daily-weekly- **Memory Usage**: 5x less than Python (~100MB vs ~500MB)
-
-- **API Response Time**: ~2ms average (<50ms p99)
-
-### Memory Issues- **API Throughput**: ~2,500 requests/second
-
-- **Daily Updates**: ~30 seconds (incremental changes only)
-
-The Go tools are memory-efficient (~100MB), but if you encounter issues:- **Binary Size**: ~17MB total for all three tools
-
-
-
-```bash### General Metrics
-
-# Process single callsign to test
-
-./bin/hamqrzdb-process --full --callsign KJ5DJC- **Database Size**: ~500MB SQLite file for 1.5M callsigns
-
-- **JSON Files**: ~1-2GB total (optional, for nginx deployment)
-
-# Check system resources- **Docker Image**: Only ~10MB (nginx:alpine, data is bind-mounted)
-
-free -h  # Linux- **Updates**: Instant with Go API (database changes are live immediately)
-
-vm_stat  # macOS
-
-```## Project Files
-
-
-
-## Data Source & Updates**Go Tools (Recommended):**
-
-- `main.go` - Go API server with case-insensitive lookups
-
-### FCC ULS Database- `cmd/process/main.go` - Go data processor (FCC downloads and SQLite)
-
-- `cmd/locations/main.go` - Go locations processor (coordinates and grids)
-
-- **Full Database**: https://data.fcc.gov/download/pub/uls/complete/l_amat.zip (~500MB)- `Taskfile.yml` - Task automation configuration
-
-- **Daily Updates**: https://data.fcc.gov/download/pub/uls/daily/l_am_MMDDYYYY.zip (~1-5MB)
-
-- **Update Schedule**: Daily updates usually available by 2 AM ET**Python Scripts (Legacy):**
-
-- **Documentation**: https://www.fcc.gov/uls/transactions/daily-weekly- `process_uls_db.py` - Main database processor (load, update, generate JSON)
-
-- `process_uls_locations.py` - Optional location data processor (lat/lon, grid squares)
-
-### License Status Codes
-
-**Update Scripts:**
-
-- `A` = Active- `update-daily-db.sh` - Daily incremental updates with database
-
-- `C` = Canceled- `update-weekly-db.sh` - Weekly full rebuild with database backup
-
-- `E` = Expired- `regenerate-json-db.sh` - Regenerate JSON from existing database
-
-- `T` = Terminated
-
-**Configuration:**
-
-### Operator Classes- `docker-compose.yml` - Docker service configuration
-
-- `nginx.conf` - nginx URL rewriting and CORS configuration
-
-- `N` = Novice (no longer issued)- `404.json` - NOT_FOUND response template
-
-- `T` = Technician
-
-- `G` = General**Documentation:**
-
-- `A` = Amateur Extra- `docs/README.cli.md` - Go CLI tools reference
-
-- `P` = Technician Plus (no longer issued)- `docs/TASKFILE-MIGRATION.md` - Migration guide from Makefile to Task
-
-- `docs/LOCATIONS.md` - Locations processor guide
-
-## License- `docs/QUICKREF.md` - Quick reference card
-
-- `DOCKER.md` - Complete Docker deployment guide
-
-MIT License - See [LICENSE](LICENSE) file for details.- `.github/copilot-instructions.md` - GitHub Copilot guidelines
-
-
-
-## Credits## Important Notes
-
-
-
-**Data Source:**### Location Data
-
-- FCC Universal Licensing System (ULS) - https://www.fcc.gov/uls/
-
-Location data (latitude, longitude, grid squares) is **optional** and processed separately:
-
-**Inspiration:**
-
-- [k3ng/hamdb](https://github.com/k3ng/hamdb) for the original HamDB project and API format```bash
-
-# Add location data after initial setup
-
-**Built with:**python3 process_uls_locations.py --la-file temp_uls/LA.dat --regenerate
-
-- [Go](https://golang.org/) - Programming language```
-
-- [SQLite](https://www.sqlite.org/) - Database engine
-
-- [Task](https://taskfile.dev/) - Task runnerNot all callsigns have location data in the FCC database. The location processor:
-
-- [go-sqlite3](https://github.com/mattn/go-sqlite3) - SQLite driver for Go- Parses LA.dat (Location/Antenna) records
-
-- Calculates Maidenhead grid squares from coordinates
-
----- Updates the database and regenerates affected JSON files
-
-
-
-**73! 📻**### License Status Codes
-
-
-
-For questions, issues, or contributions, visit: https://github.com/chriskacerguis/hamqrzdb- `A` = Active
-
-- `C` = Canceled  
-- `E` = Expired
-- `T` = Terminated
-
-### Operator Classes
-
-- `N` = Novice
-- `T` = Technician
-- `G` = General
-- `A` = Amateur Extra
-- `P` = Technician Plus
-
-## Task Commands Reference
-
-Quick reference for common Task commands. See [docs/TASKFILE-MIGRATION.md](docs/TASKFILE-MIGRATION.md) for complete guide.
+## Performance
+
+### Benchmarks
+
+| Operation | Time | Notes |
+|-----------|------|-------|
+| Full database load | 3-5 min | 1.5M callsigns |
+| Daily updates | ~30 sec | Incremental changes |
+| Location processing | 2-3 min | All callsigns |
+| API response time | ~2ms | Average (p50) |
+| API response time | <50ms | p99 |
+| API throughput | ~2,500 req/s | Single instance |
+| Memory usage | ~100MB | API server |
+| Database size | ~500MB | 1.5M callsigns |
+
+### Comparison to Python
+
+- **4-5x faster** data processing
+- **5x less memory** usage
+- **50x faster** API responses
+- **Single binary** deployment (no dependencies)
+
+## Task Commands
+
+Quick reference for common operations:
 
 ```bash
-# List all available tasks
-task --list
-
 # Build commands
 task build              # Build all binaries
 task build:api          # Build API server only
 task build:process      # Build data processor only
 task build:locations    # Build locations processor only
 
-# Development commands
+# Development
 task dev:api                              # Run API server
 task dev:process -- --full                # Run data processor
 task dev:locations -- --la-file LA.dat    # Run locations processor
 
-# Database commands
+# Database operations
 task db:full            # Download and process full database
 task db:daily           # Process daily updates
 task db:locations       # Process location data
 task db:stats           # Show database statistics
 
-# Docker commands
+# Docker operations
 task docker:build       # Build Docker image
 task docker:up          # Start services
 task docker:down        # Stop services
 task docker:logs        # View logs
 
-# Utility commands
+# Utility
 task clean              # Remove build artifacts
 task install            # Install to /usr/local/bin
 task test               # Run tests
 task help               # Show detailed help
+task --list             # List all available tasks
 ```
+
+See [docs/TASKFILE-MIGRATION.md](docs/TASKFILE-MIGRATION.md) for migration guide from Makefile.
+
+## Project Structure
+
+```
+hamqrzdb/
+├── main.go                   # API server source
+├── cmd/
+│   ├── process/main.go       # Data processor source
+│   └── locations/main.go     # Locations processor source
+├── bin/                      # Compiled binaries
+│   ├── hamqrzdb-api
+│   ├── hamqrzdb-process
+│   └── hamqrzdb-locations
+├── Taskfile.yml              # Task automation configuration
+├── Dockerfile                # Docker image definition
+├── docker-compose.yml        # Docker Compose configuration
+├── hamqrzdb.sqlite           # SQLite database (generated)
+├── temp_uls/                 # Downloaded FCC data (temporary)
+└── docs/                     # Documentation
+    ├── README.cli.md         # CLI tools reference
+    ├── TASKFILE-MIGRATION.md # Makefile→Task migration guide
+    ├── LOCATIONS.md          # Locations processor guide
+    └── QUICKREF.md           # Quick reference card
+```
+
+## Documentation
+
+- **[README.cli.md](docs/README.cli.md)** - Complete CLI reference for all tools
+- **[TASKFILE-MIGRATION.md](docs/TASKFILE-MIGRATION.md)** - Migration guide from Makefile
+- **[LOCATIONS.md](docs/LOCATIONS.md)** - Locations processor detailed guide
+- **[QUICKREF.md](docs/QUICKREF.md)** - Quick reference card for common operations
 
 ## Troubleshooting
 
-### Out of Memory
+### Build Errors
 
-**Go tools** use efficient batch processing (~100MB RAM). If using Python and encountering memory issues:
+**Error: `CGO_ENABLED` required for SQLite**
 
-```bash
-# Use the Go tools instead (recommended)
-task db:full
-
-# Or use Python streaming version (very low memory)
-python3 process_uls_streaming.py --full
-```
-
-### Download Fails
-
-Check the FCC website for changes to URLs or file formats:
-- https://www.fcc.gov/uls/transactions/daily-weekly
-
-### Daily File Not Available
-
-Daily files may not be available on weekends or holidays. Run `--full` or wait for next daily update.
-
-### nginx Not Serving Files
-
-Check that:
-1. JSON files exist in `output/` directory
-2. `404.json` exists in `output/404.json`
-3. nginx.conf is mounted correctly
-4. File permissions allow reading
+Solution: Make sure you have a C compiler installed:
 
 ```bash
-# Check files
-ls -la output/K/J/5/KJ5DJC.json
-ls -la output/404.json
+# macOS
+xcode-select --install
 
-# Check nginx config
-docker-compose exec nginx nginx -t
+# Ubuntu/Debian
+sudo apt-get install build-essential
 
-# Restart nginx
-docker-compose restart
+# Fedora/RHEL
+sudo dnf install gcc
 ```
 
-### Database Corruption
+### Database Errors
 
-If the database becomes corrupted:
+**Error: Database locked**
+
+Solution: Close any other connections to the database:
+
+```bash
+# Find processes using the database
+lsof hamqrzdb.sqlite
+
+# Kill the process if needed
+kill <PID>
+```
+
+**Error: Database corrupted**
+
+Solution: Rebuild from scratch:
 
 ```bash
 # Backup current database
 cp hamqrzdb.sqlite hamqrzdb.sqlite.backup
 
-# Rebuild from scratch
-rm hamqrzdb.sqlite
-python3 process_uls_db.py --full
+# Remove and rebuild
+rm hamqrzdb.sqlite hamqrzdb.sqlite-*
+task db:full
 ```
+
+### Download Errors
+
+**Error: Daily file not available**
+
+Solution: Daily files may not be available on weekends/holidays. Use full database instead:
+
+```bash
+task db:full
+```
+
+**Error: Download failed**
+
+Solution: Check FCC website status and try again:
+
+- https://www.fcc.gov/uls/transactions/daily-weekly
+
+### Memory Issues
+
+The Go tools are memory-efficient (~100MB), but if you encounter issues:
+
+```bash
+# Process single callsign to test
+./bin/hamqrzdb-process --full --callsign KJ5DJC
+
+# Check system resources
+free -h  # Linux
+vm_stat  # macOS
+```
+
+## Data Source & Updates
+
+### FCC ULS Database
+
+- **Full Database**: https://data.fcc.gov/download/pub/uls/complete/l_amat.zip (~500MB)
+- **Daily Updates**: https://data.fcc.gov/download/pub/uls/daily/l_am_MMDDYYYY.zip (~1-5MB)
+- **Update Schedule**: Daily updates usually available by 2 AM ET
+- **Documentation**: https://www.fcc.gov/uls/transactions/daily-weekly
+
+### License Status Codes
+
+- `A` = Active
+- `C` = Canceled
+- `E` = Expired
+- `T` = Terminated
+
+### Operator Classes
+
+- `N` = Novice (no longer issued)
+- `T` = Technician
+- `G` = General
+- `A` = Amateur Extra
+- `P` = Technician Plus (no longer issued)
 
 ## License
 
-MIT License - Feel free to use and modify for your needs.
+MIT License - See [LICENSE](LICENSE) file for details.
 
 ## Credits
 
@@ -1188,4 +522,16 @@ MIT License - Feel free to use and modify for your needs.
 - FCC Universal Licensing System (ULS) - https://www.fcc.gov/uls/
 
 **Inspiration:**
-- Special thanks to [k3ng/hamdb](https://github.com/k3ng/hamdb) for the original HamDB project and API format inspiration
+- [k3ng/hamdb](https://github.com/k3ng/hamdb) for the original HamDB project and API format
+
+**Built with:**
+- [Go](https://golang.org/) - Programming language
+- [SQLite](https://www.sqlite.org/) - Database engine
+- [Task](https://taskfile.dev/) - Task runner
+- [go-sqlite3](https://github.com/mattn/go-sqlite3) - SQLite driver for Go
+
+---
+
+**73! 📻**
+
+For questions, issues, or contributions, visit: https://github.com/chriskacerguis/hamqrzdb

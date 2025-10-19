@@ -1,4 +1,3 @@
-package hamqrzdb
 # Multi-stage build for Go API server
 FROM golang:1.25-alpine AS builder
 

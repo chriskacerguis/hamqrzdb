@@ -419,7 +419,7 @@ func (p *Processor) LoadHDFile(filePath, filterCallsign string) error {
 			continue
 		}
 
-		if filterCallsign != "" && strings.ToUpper(callsign) != strings.ToUpper(filterCallsign) {
+		if filterCallsign != "" && !strings.EqualFold(callsign, filterCallsign) {
 			continue
 		}
 
@@ -428,7 +428,6 @@ func (p *Processor) LoadHDFile(filePath, filterCallsign string) error {
 		grantDate := ""
 		expiredDate := ""
 		cancellationDate := ""
-
 		if len(row) > 5 {
 			licenseStatus = strings.TrimSpace(row[5])
 		}
@@ -444,7 +443,6 @@ func (p *Processor) LoadHDFile(filePath, filterCallsign string) error {
 		if len(row) > 9 {
 			cancellationDate = strings.TrimSpace(row[9])
 		}
-
 		if _, err := stmt.Exec(callsign, licenseStatus, radioServiceCode, grantDate, expiredDate, cancellationDate); err != nil {
 			log.Printf("Error inserting HD record: %v", err)
 			continue
@@ -523,7 +521,7 @@ func (p *Processor) UpdateENData(filePath, filterCallsign string) error {
 			continue
 		}
 
-		if filterCallsign != "" && strings.ToUpper(callsign) != strings.ToUpper(filterCallsign) {
+		if filterCallsign != "" && !strings.EqualFold(callsign, filterCallsign) {
 			continue
 		}
 
@@ -648,7 +646,7 @@ func (p *Processor) UpdateAMData(filePath, filterCallsign string) error {
 			continue
 		}
 
-		if filterCallsign != "" && strings.ToUpper(callsign) != strings.ToUpper(filterCallsign) {
+		if filterCallsign != "" && !strings.EqualFold(callsign, filterCallsign) {
 			continue
 		}
 
