@@ -62,16 +62,17 @@ tasks:
 
   info:
     desc: Show binary sizes
+    silent: true
     cmds:
       - echo "📊 Binary sizes"
       - ls -lh {{.BIN_DIR}}/
       - echo ""
       - echo "Quick start"
-      - echo "   task dev process -- --full                    Download and process FCC data"
-      - echo "   task dev locations -- --la-file LA.dat        Add location data"
-      - echo "   task dev api                                  Start API server"
+      - echo "   task dev:process -- --full                       Download and process FCC data"
+      - echo "   task db:locations -- --la-file temp_uls/LA.dat   Add location data"
+      - echo "   task dev:api                                     Start API server"
       - echo ""
-      - echo "For more commands run task --list"
+      - echo "For more commands run 'task --list'"
 
   clean:
     desc: Remove build artifacts

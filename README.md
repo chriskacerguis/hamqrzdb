@@ -43,6 +43,7 @@ brew install go-task/tap/go-task  # macOS
 # 2. Clone and build
 git clone https://github.com/chriskacerguis/hamqrzdb.git
 cd hamqrzdb
+
 task build
 
 # 3. Process FCC data (3-5 minutes)

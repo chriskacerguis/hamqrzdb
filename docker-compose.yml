@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/chriskacerguis/hamqrzdb:latest
     restart: unless-stopped
     ports:
       - "8080:8080"
