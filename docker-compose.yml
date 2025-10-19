@@ -2,8 +2,7 @@ version: '3.8'
 
 services:
   hamqrzdb:
-    build: .
-    container_name: hamqrzdb
+    image: ghcr.io/chriskacerguis/hamqrzdb:sha-816abbe
     ports:
       - "8080:80"
     restart: unless-stopped
