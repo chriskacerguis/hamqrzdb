@@ -1,0 +1,41 @@
+# Ignore html directory (except index.html, which is explicitly copied)
+html/*
+!html/index.html
+
+# Ignore git
+.git
+.gitignore
+
+# Ignore documentation
+docs/
+*.md
+!README.md
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore test files
+*test*.py
+create_test.py
+
+# Ignore old config files
+nginx.conf
+nginx-ssl.conf
+Dockerfile
+docker-compose.yml
+
+# Ignore SSL certificates
+certbot/
+
+# Ignore shell scripts
+*.sh
+
+# Ignore CloudFront/AWS files (legacy)
+cloudfront-*.js
+bucket-policy.json
+
+# Ignore SQLite database (mounted as volume)
+*.sqlite
+*.db

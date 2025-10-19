@@ -1,46 +1,85 @@
-# Ignore Python cache
-__pycache__/
-*.py[cod]
-*$py.class
+# Go build artifacts
+bin/
+*.exe
+*.exe~
+*.dll
 *.so
-.Python
+*.dylib
 
-# Virtual environment
-venv/
-env/
-ENV/
+# Go test cache
+*.test
+*.out
+go.work
 
-# Output directory - ignore all generated content except 404.json and index.html
-output/*
-!output/404.json
-!output/index.html
+# Task build cache
+.task/
 
-# Database
+# Output directory - ignore all generated JSON files except 404.json
+# Keep index.html for the API documentation page
+html/*
+!html/404.json
+!html/index.html
+!html/.gitkeep
+
+# Database files
 hamqrzdb.sqlite
+hamqrzdb.sqlite-shm
+hamqrzdb.sqlite-wal
+*.db
+*.db-shm
+*.db-wal
 
 # Temporary ULS data
 temp_uls/
+*.dat
+
+# Downloaded FCC data
+l_amat.zip
+l_am_*.zip
 
 # Logs
 logs/
 *.log
 
-# AWS
-.aws/
+# Docker volumes and data
+certbot/
 
-# Editor
+# Legacy files (if any remain)
+*.py
+__pycache__/
+*.pyc
+venv/
+env/
+
+# Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.DS_Store
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
+
+# Environment files
+.env
+.env.local
 
 # Distribution configs (may contain sensitive data)
 dist-config*.json
 
-# Zip files
+# Backup files
+*.bak
+*.backup
+*~
+
+# Zip and compressed files
 *.zip
+*.tar.gz
+*.tgz
+
+# Test files
+test_*.json
+*.test.json
