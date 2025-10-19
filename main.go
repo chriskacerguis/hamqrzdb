@@ -155,7 +155,7 @@ func lookupCallsign(callsign string) (CallsignData, bool) {
 	var data CallsignData
 	var lat, lon sql.NullFloat64
 	var gridSquare, expiredDate sql.NullString
-	
+
 	err := db.QueryRow(query, callsign).Scan(
 		&data.Call, &data.Class, &expiredDate, &data.Status,
 		&gridSquare, &lat, &lon,
