@@ -152,12 +152,15 @@ class ULSDatabase:
     
     def get_all_callsigns(self):
         """Generator that yields all callsigns one at a time"""
-        self.cursor.execute('SELECT callsign FROM callsigns ORDER BY callsign')
+        # Use a separate cursor to avoid conflicts with nested queries
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT callsign FROM callsigns ORDER BY callsign')
         while True:
-            row = self.cursor.fetchone()
+            row = cursor.fetchone()
             if row is None:
                 break
             yield row[0]
+        cursor.close()
     
     def get_callsign_count(self) -> int:
         """Get total number of callsigns in database"""

@@ -42,3 +42,4 @@ dist-config*.json
 
 # Ignore Output
 output/
+hamqrzdb.sqlite
