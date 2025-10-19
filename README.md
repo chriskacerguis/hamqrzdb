@@ -1,92 +1,160 @@
 # Ham Radio Callsign Lookup System
 
-A high-performance system for creating and serving static JSON files for amateur radio callsign lookups using FCC ULS data.
+A high-performance, self-hosted system for serving amateur radio callsign data via a HamDB-compatible JSON API. Uses SQLite for efficient data storage and nginx for lightning-fast static file serving.
+
+## Table of Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+- [API Format](#api-format)
+- [Docker Deployment](#docker-deployment)
+- [Automation](#automation)
+- [Performance Notes](#performance-notes)
+- [Project Files](#project-files)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+- [Credits](#credits)
+
+## Features
+
+- 🚀 **HamDB-compatible API** - Drop-in replacement for HamDB lookups
+- 💾 **SQLite database** - Efficient storage with ~50-100MB RAM usage
+- 📦 **Docker deployment** - Simple setup with stock nginx:alpine
+- 🔄 **Incremental updates** - Daily updates without full rebuilds
+- 📍 **Optional location data** - Coordinates and Maidenhead grid squares
+- ⚡ **Zero-downtime updates** - Changes are instant with bind mounts
+- 🌐 **CORS enabled** - Ready for web applications
 
 ## Architecture
 
-1. **Data Processing Script** (`process_uls.py`) - Downloads and processes FCC ULS data into static JSON files
-2. **nginx** - Serves static files with URL rewriting and NOT_FOUND handling
-3. **Docker** - Containerized deployment with bind mounts for easy updates
+1. **Data Processing** (`process_uls_db.py`) - Downloads FCC ULS data, loads into SQLite, generates JSON files
+2. **Location Processing** (`process_uls_locations.py`) - Optional: Adds coordinates and grid squares
+3. **nginx** (Docker) - Serves static JSON files with URL rewriting
+4. **SQLite Database** - Single-file database (~500MB for full dataset)
+5. **Static JSON Files** - Nested directory structure (~1-2GB for 1.5M callsigns)
 
 > [!TIP]
-> The service is lightweight, but consider using Cloudflare or another CDN in front of it for production deployments.
+> Consider using Cloudflare or another CDN in front for production deployments.
 
 ## Quick Start
 
 ```bash
-# Process the database
-./process_uls.py --full
+# 1. Process the full FCC database
+python3 process_uls_db.py --full
 
-# Start the server
+# 2. Optional: Add location data (coordinates, grid squares)
+python3 process_uls_locations.py --la-file temp_uls/LA.dat --regenerate
+
+# 3. Start the nginx server
 docker-compose up -d
 
-# Test it
-curl http://localhost:8080/v1/KJ5DJC/json/test
+# 4. Test it
+curl http://localhost/v1/KJ5DJC/json/test
 ```
 
 See [DOCKER.md](DOCKER.md) for complete deployment guide.
 
-## Setup
-
-### Prerequisites
+## Prerequisites
 
 - Python 3.7+
 - Docker and Docker Compose
+- ~2GB disk space for full dataset
 
-### Installation
+## Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/chriskacerguis/hamqrzdb.git
 cd hamqrzdb
 
-# Make the script executable
-chmod +x process_uls.py
-chmod +x update-daily.sh
-chmod +x update-weekly.sh
+# Make scripts executable
+chmod +x *.sh
+chmod +x process_uls_db.py
+chmod +x process_uls_locations.py
 ```
 
 ## Usage
 
-### Download and Process Full Database
+### Initial Database Setup
+
+**Full database load** (processes all 1.5M callsigns):
 
 ```bash
-./process_uls.py --full
+python3 process_uls_db.py --full
 ```
 
 This will:
-1. Download the complete ULS amateur radio database (~500MB)
-2. Extract and process HD.dat, EN.dat, and AM.dat files
-3. Generate JSON files in the `output/` directory with structure: `output/K/J/5/KJ5DJC.json`
+1. Download the complete ULS amateur radio database (~500MB ZIP)
+2. Extract HD.dat, EN.dat, and AM.dat files
+3. Load data into SQLite database (`hamqrzdb.sqlite`)
+4. Generate 1.5M JSON files in nested directory structure
+5. Takes ~10-20 minutes depending on disk speed
 
-### Download and Process Daily Updates
+**Single callsign** (for testing):
 
 ```bash
-./process_uls.py --daily
+python3 process_uls_db.py --full --callsign KJ5DJC
 ```
 
-This downloads only today's incremental changes and processes them.
+### Add Location Data (Optional)
 
-### Process a Specific Callsign
+Location data adds latitude, longitude, and Maidenhead grid squares:
 
 ```bash
-./process_uls.py --full --callsign KJ5DJC
+# Download full database if not already done
+python3 process_uls_db.py --full
+
+# Process location data and regenerate JSON files
+python3 process_uls_locations.py --la-file temp_uls/LA.dat --regenerate
 ```
 
-Downloads the full database but only generates a JSON file for the specified callsign.
+**Note:** The full database download includes LA.dat in `temp_uls/` directory.
 
-### Process a Local File
+### Generate JSON Files from Database
+
+If you already have the database loaded and just need to regenerate JSON files:
 
 ```bash
-./process_uls.py --file /path/to/l_amat.zip
+# Generate all JSON files
+python3 process_uls_db.py --generate
+
+# Generate single callsign
+python3 process_uls_db.py --generate --callsign KJ5DJC
 ```
 
-Processes a ZIP file you've already downloaded.
+### Daily Updates
 
-### Custom Output Directory
+Update with daily changes from FCC (incremental):
 
 ```bash
-./process_uls.py --full --output /path/to/output
+# Using database scripts (recommended)
+./update-daily-db.sh
+
+# Manual
+python3 process_uls_db.py --daily
+```
+
+Daily updates:
+- Download only today's changes (~1-5MB)
+- Upsert changes into database
+- Regenerate only affected JSON files
+- Much faster than full rebuild
+
+### Weekly Full Rebuild
+
+Rebuild the entire database from scratch:
+
+```bash
+# Using database script (recommended)
+./update-weekly-db.sh
+
+# Manual
+rm hamqrzdb.sqlite
+python3 process_uls_db.py --full
 ```
 
 ## File Structure
@@ -139,22 +207,29 @@ Each JSON file follows this structure:
 }
 ```
 
-## API Endpoints
+## API Format
 
-### HamDB Compatible Format
+### Endpoint
 
 ```
-/v1/{callsign}/json/{appname}
+GET /v1/{callsign}/json/{appname}
 ```
 
-**Examples:**
+- `{callsign}` - Amateur radio callsign (e.g., KJ5DJC, W1AW)
+- `{appname}` - Your application name (required for compatibility, not used)
+
+### Examples
+
 ```bash
 # Valid callsign
-curl http://localhost:8080/v1/KJ5DJC/json/myapp
+curl http://localhost/v1/KJ5DJC/json/myapp
 curl https://lookup.kj5djc.com/v1/KJ5DJC/json/hamdb
 
-# Invalid callsign (returns NOT_FOUND)
-curl http://localhost:8080/v1/BADCALL/json/test
+# Invalid callsign (returns NOT_FOUND response)
+curl http://localhost/v1/BADCALL/json/test
+
+# Health check
+curl http://localhost/health
 ```
 
 ### Response Format
@@ -195,71 +270,112 @@ curl http://localhost:8080/v1/BADCALL/json/test
 
 Both return **HTTP 200** for client compatibility.
 
-## API URL Format
+### Features
 
-The API follows the HamDB-compatible format:
+- **Always returns HTTP 200** - Even for invalid callsigns (client compatibility)
+- **CORS enabled** - `Access-Control-Allow-Origin: *`
+- **Compressed responses** - gzip enabled for JSON
+- **Caching headers** - 24-hour cache for callsign data
+- **Sub-10ms response time** - nginx static file serving
 
-```
-http://your-domain.com/v1/{callsign}/json/{appname}
+## Docker Deployment
+
+Start the nginx server to serve the JSON files:
+
+```bash
+# Start service
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop service
+docker-compose down
 ```
 
-**Examples:**
-```
-http://localhost:8080/v1/KJ5DJC/json/myapp
-https://lookup.kj5djc.com/v1/KJ5DJC/json/hamdb
-```
-
-The `{appname}` parameter is required for compatibility but is not used by the API.
-
-## Automation
-https://lookup.kj5djc.com/v1/KJ5DJC/json/hamdb
-```
+The service runs on port 80 by default. Edit `docker-compose.yml` to change the port.
 
 ## Automation
 
 With Docker bind mounts, updates are instant and don't require container restarts:
 
 ```bash
+# Create logs directory
+mkdir -p logs
+
 # Add to crontab
 crontab -e
 
-# Daily updates at 2 AM
-0 2 * * * cd /path/to/hamqrzdb && ./update-daily.sh >> logs/cron.log 2>&1
+# Daily updates at 2 AM (using database approach)
+0 2 * * * cd /path/to/hamqrzdb && ./update-daily-db.sh >> logs/cron.log 2>&1
 
-# Weekly full rebuild on Sunday at 3 AM
-0 3 * * 0 cd /path/to/hamqrzdb && ./update-weekly.sh >> logs/cron.log 2>&1
+# Weekly full rebuild on Sunday at 3 AM (using database approach)
+0 3 * * 0 cd /path/to/hamqrzdb && ./update-weekly-db.sh >> logs/cron.log 2>&1
 ```
 
 Changes are live immediately - no container restart needed!
 
 ### Included Scripts
 
-- `update-daily.sh` - Downloads daily changes and updates data
-- `update-weekly.sh` - Full database rebuild
+**Database scripts (recommended):**
+- `update-daily-db.sh` - Daily incremental updates with database upserts
+- `update-weekly-db.sh` - Weekly full rebuild with automatic backup
+- `regenerate-json-db.sh` - Regenerate all JSON files from existing database
+
+**Legacy scripts:**
+- `update-daily.sh` - Daily updates (direct file processing, deprecated)
+- `update-weekly.sh` - Weekly rebuild (direct file processing, deprecated)
 
 ## Performance Notes
 
-- **Processing Speed**: Processes ~1M records in a few minutes
-- **Disk Space**: Full database generates ~1-2GB of JSON files
-- **Memory**: Minimal memory usage with streaming CSV parsing
-- **Docker Image**: Only ~10MB (nginx + config, data is bind-mounted)
+- **Database Size**: ~500MB SQLite file for 1.5M callsigns
+- **JSON Files**: ~1-2GB total (nested directory structure)
+- **Memory Usage**: 50-100MB RAM (SQLite batch processing)
+- **Initial Load**: ~10-20 minutes for full database + JSON generation
+- **Daily Updates**: 1-5 minutes (incremental changes only)
+- **Docker Image**: Only ~10MB (nginx:alpine, data is bind-mounted)
+- **Response Time**: <10ms with nginx static file serving
 - **Updates**: Instant with bind mounts (no container restart required)
 
-## Documentation
+## Project Files
 
-- **[DOCKER.md](DOCKER.md)** - Complete Docker deployment guide
-- **[docs/QUICKSTART.md](docs/QUICKSTART.md)** - Quick start guide
-- **[docs/STRUCTURE.md](docs/STRUCTURE.md)** - Project structure details
+**Main Scripts:**
+- `process_uls_db.py` - Main database processor (load, update, generate JSON)
+- `process_uls_locations.py` - Optional location data processor (lat/lon, grid squares)
+- `process_uls_streaming.py` - Memory-optimized streaming processor (legacy)
+- `process_uls_enhanced.py` - In-memory processor (deprecated)
+
+**Update Scripts:**
+- `update-daily-db.sh` - Daily incremental updates with database
+- `update-weekly-db.sh` - Weekly full rebuild with database backup
+- `regenerate-json-db.sh` - Regenerate JSON from existing database
+
+**Configuration:**
+- `docker-compose.yml` - Docker service configuration
+- `nginx.conf` - nginx URL rewriting and CORS configuration
+- `404.json` - NOT_FOUND response template
+
+**Documentation:**
+- `DOCKER.md` - Complete Docker deployment guide
+- `DATABASE-SCRIPTS.md` - Database script documentation
+- `MEMORY-OPTIMIZATION.md` - Handling large datasets
+- `.github/copilot-instructions.md` - GitHub Copilot guidelines
 
 ## Important Notes
 
-### Missing Coordinates
+### Location Data
 
-The current script doesn't include latitude/longitude data because that information is in additional files (LA.dat - Location/Antenna). To add coordinate support:
+Location data (latitude, longitude, grid squares) is **optional** and processed separately:
 
-1. Modify the script to also parse LA.dat
-2. Match location records to callsigns
-3. Calculate grid squares from coordinates
+```bash
+# Add location data after initial setup
+python3 process_uls_locations.py --la-file temp_uls/LA.dat --regenerate
+```
+
+Not all callsigns have location data in the FCC database. The location processor:
+- Parses LA.dat (Location/Antenna) records
+- Calculates Maidenhead grid squares from coordinates
+- Updates the database and regenerates affected JSON files
 
 ### License Status Codes
 
@@ -278,6 +394,17 @@ The current script doesn't include latitude/longitude data because that informat
 
 ## Troubleshooting
 
+### Out of Memory
+
+The database version (`process_uls_db.py`) uses batch processing and should handle large datasets with 50-100MB RAM. If you still encounter issues:
+
+```bash
+# Use streaming version (very low memory)
+python3 process_uls_streaming.py --full
+```
+
+See [MEMORY-OPTIMIZATION.md](MEMORY-OPTIMIZATION.md) for details.
+
 ### Download Fails
 
 Check the FCC website for changes to URLs or file formats:
@@ -285,11 +412,40 @@ Check the FCC website for changes to URLs or file formats:
 
 ### Daily File Not Available
 
-Daily files may not be available on weekends or holidays. Use `--full` or provide a specific `--file`.
+Daily files may not be available on weekends or holidays. Run `--full` or wait for next daily update.
 
-### Out of Memory
+### nginx Not Serving Files
 
-If processing fails due to memory, consider processing in batches or increasing system memory.
+Check that:
+1. JSON files exist in `output/` directory
+2. `404.json` exists in `output/404.json`
+3. nginx.conf is mounted correctly
+4. File permissions allow reading
+
+```bash
+# Check files
+ls -la output/K/J/5/KJ5DJC.json
+ls -la output/404.json
+
+# Check nginx config
+docker-compose exec nginx nginx -t
+
+# Restart nginx
+docker-compose restart
+```
+
+### Database Corruption
+
+If the database becomes corrupted:
+
+```bash
+# Backup current database
+cp hamqrzdb.sqlite hamqrzdb.sqlite.backup
+
+# Rebuild from scratch
+rm hamqrzdb.sqlite
+python3 process_uls_db.py --full
+```
 
 ## License
 
