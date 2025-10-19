@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """
-Enhanced FCC ULS Amateur Radio Callsign Data Processor with Location Support
-Processes HD.dat, EN.dat, AM.dat, and LA.dat files to generate complete JSON callsign records
+DEPRECATED: This file is no longer maintained.
+
+Please use process_uls_db.py instead, which provides:
+- Memory-efficient SQLite database storage
+- Incremental updates with upsert support
+- Better handling of large datasets
+- Separate location processing with process_uls_locations.py
+
+This file is kept for reference only.
 """
 
 import argparse
