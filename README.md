@@ -78,7 +78,8 @@ cd hamqrzdb
 brew install go-task/tap/go-task
 
 # Install Task (Linux)
-sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d
+curl -1sLf 'https://dl.cloudsmith.io/public/task/task/setup.deb.sh' | sudo -E bash
+apt install task
 
 # Install Task (or with Go)
 go install github.com/go-task/task/v3/cmd/task@latest
