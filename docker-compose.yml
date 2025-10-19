@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   api:
-    image: docker pull ghcr.io/chriskacerguis/hamqrzdb:${HAMQRZDB_IMAGE_TAG}
+    image: ghcr.io/chriskacerguis/hamqrzdb:${HAMQRZDB_IMAGE_TAG}
     restart: unless-stopped
     ports:
       - "8080:8080"
