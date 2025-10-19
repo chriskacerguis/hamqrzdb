@@ -382,8 +382,8 @@ class ULSProcessorDB:
             'T': 'T',  # Terminated
         }
         
-        status = status_map.get(record.get('license_status', ''), 'NOT_FOUND')
-        operator_class = record.get('operator_class', 'NOT_FOUND') or 'NOT_FOUND'
+        status = status_map.get(record.get('license_status', ''), '')
+        operator_class = record.get('operator_class', '') or ''
         expires = self.format_expiration_date(record.get('expired_date', ''))
         
         # Get name components
@@ -397,9 +397,9 @@ class ULSProcessorDB:
             last_name = record.get('entity_name', '')
         
         # Get coordinates
-        grid = record.get('grid_square', 'NOT_FOUND') or 'NOT_FOUND'
-        lat = str(record.get('latitude', 'NOT_FOUND')) if record.get('latitude') else 'NOT_FOUND'
-        lon = str(record.get('longitude', 'NOT_FOUND')) if record.get('longitude') else 'NOT_FOUND'
+        grid = record.get('grid_square', '') or ''
+        lat = str(record.get('latitude', '')) if record.get('latitude') else ''
+        lon = str(record.get('longitude', '')) if record.get('longitude') else ''
         
         return {
             "hamdb": {
