@@ -5,24 +5,45 @@ A high-performance system for creating and serving static JSON files for amateur
 ## Architecture
 
 1. **Data Processing Script** (`process_uls.py`) - Downloads and processes FCC ULS data into static JSON files
-2. **AWS S3** - Stores the static JSON files
-3. **CloudFront** - CDN for fast global access
-4. **CloudFront Function** - Routes requests and handles the API format
+2. **nginx** - Serves static files with URL rewriting and NOT_FOUND handling
+3. **Docker** - Containerized deployment with bind mounts for easy updates
+
+> [!TIP]
+> The service is lightweight, but consider using Cloudflare or another CDN in front of it for production deployments.
+
+## Quick Start
+
+```bash
+# Process the database
+./process_uls.py --full
+
+# Start the server
+docker-compose up -d
+
+# Test it
+curl http://localhost:8080/v1/KJ5DJC/json/test
+```
+
+See [DOCKER.md](DOCKER.md) for complete deployment guide.
 
 ## Setup
 
 ### Prerequisites
 
 - Python 3.7+
-- AWS CLI configured with appropriate credentials
-- AWS S3 bucket created
-- CloudFront distribution set up
+- Docker and Docker Compose
 
 ### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/chriskacerguis/hamqrzdb.git
+cd hamqrzdb
+
 # Make the script executable
 chmod +x process_uls.py
+chmod +x update-daily.sh
+chmod +x update-weekly.sh
 ```
 
 ## Usage
@@ -66,23 +87,6 @@ Processes a ZIP file you've already downloaded.
 
 ```bash
 ./process_uls.py --full --output /path/to/output
-```
-
-## Upload to S3
-
-After processing, sync the files to S3:
-
-```bash
-aws s3 sync output/ s3://your-bucket-name/ --delete
-```
-
-For better performance, you can:
-
-```bash
-# Use parallel uploads
-aws s3 sync output/ s3://your-bucket-name/ --delete --only-show-errors
-
-# Or with s3-dist-cp for massive datasets
 ```
 
 ## File Structure
@@ -135,66 +139,117 @@ Each JSON file follows this structure:
 }
 ```
 
-## CloudFront Setup
+## API Endpoints
 
-### 1. Create S3 Bucket
+### HamDB Compatible Format
 
-```bash
-aws s3 mb s3://hamqrz-callsigns
-aws s3api put-bucket-policy --bucket hamqrz-callsigns --policy file://bucket-policy.json
+```
+/v1/{callsign}/json/{appname}
 ```
 
-### 2. Create CloudFront Distribution
+**Examples:**
+```bash
+# Valid callsign
+curl http://localhost:8080/v1/KJ5DJC/json/myapp
+curl https://lookup.kj5djc.com/v1/KJ5DJC/json/hamdb
 
-- Origin: Your S3 bucket
-- Viewer Protocol Policy: Redirect HTTP to HTTPS
-- Allowed HTTP Methods: GET, HEAD, OPTIONS
-- Cache Policy: CachingOptimized or custom
+# Invalid callsign (returns NOT_FOUND)
+curl http://localhost:8080/v1/BADCALL/json/test
+```
 
-### 3. Add CloudFront Function
+### Response Format
 
-See `cloudfront-function.js` for the routing function that transforms:
-- `/v1/KJ5DJC/json/myapp` → `/K/J/5/KJ5DJC.json`
+**Valid Callsign:**
+```json
+{
+  "hamdb": {
+    "version": "1",
+    "callsign": {
+      "call": "KJ5DJC",
+      "class": "G",
+      ...
+    },
+    "messages": {
+      "status": "OK"
+    }
+  }
+}
+```
+
+**Invalid Callsign (NOT_FOUND):**
+```json
+{
+  "hamdb": {
+    "version": "1",
+    "callsign": {
+      "call": "NOT_FOUND",
+      "class": "NOT_FOUND",
+      ...
+    },
+    "messages": {
+      "status": "NOT_FOUND"
+    }
+  }
+}
+```
+
+Both return **HTTP 200** for client compatibility.
 
 ## API URL Format
 
+The API follows the HamDB-compatible format:
+
 ```
-https://your-distribution.cloudfront.net/v1/:callsign/json/:appname
+http://your-domain.com/v1/{callsign}/json/{appname}
 ```
 
-Example:
+**Examples:**
 ```
-https://api.hamqrz.com/v1/KJ5DJC/json/myapp
-
+http://localhost:8080/v1/KJ5DJC/json/myapp
 https://lookup.kj5djc.com/v1/KJ5DJC/json/hamdb
+```
 
+The `{appname}` parameter is required for compatibility but is not used by the API.
 
+## Automation
+https://lookup.kj5djc.com/v1/KJ5DJC/json/hamdb
 ```
 
 ## Automation
 
-### Daily Updates Cron Job
-
-Add to crontab:
+With Docker bind mounts, updates are instant and don't require container restarts:
 
 ```bash
-# Run daily at 2 AM
-0 2 * * * cd /path/to/hamqrz && ./process_uls.py --daily && aws s3 sync output/ s3://lookup.kj5djc.com/ --delete
+# Add to crontab
+crontab -e
+
+# Daily updates at 2 AM
+0 2 * * * cd /path/to/hamqrzdb && ./update-daily.sh >> logs/cron.log 2>&1
+
+# Weekly full rebuild on Sunday at 3 AM
+0 3 * * 0 cd /path/to/hamqrzdb && ./update-weekly.sh >> logs/cron.log 2>&1
 ```
 
-### Weekly Full Rebuild
+Changes are live immediately - no container restart needed!
 
-```bash
-# Run weekly on Sunday at 3 AM
-0 3 * * 0 cd /path/to/hamqrz && ./process_uls.py --full && aws s3 sync output/ s3://lookup.kj5djc.com/ --delete
-```
+### Included Scripts
+
+- `update-daily.sh` - Downloads daily changes and updates data
+- `update-weekly.sh` - Full database rebuild
 
 ## Performance Notes
 
-- **Processing Speed**: The script processes ~1M records in a few minutes
+- **Processing Speed**: Processes ~1M records in a few minutes
 - **Disk Space**: Full database generates ~1-2GB of JSON files
-- **Memory**: Script uses minimal memory with streaming CSV parsing
-- **S3 Sync**: Initial upload may take time; incremental syncs are fast
+- **Memory**: Minimal memory usage with streaming CSV parsing
+- **Docker Image**: Only ~10MB (nginx + config, data is bind-mounted)
+- **Updates**: Instant with bind mounts (no container restart required)
+
+## Documentation
+
+- **[DOCKER.md](DOCKER.md)** - Complete Docker deployment guide
+- **[docs/QUICKSTART.md](docs/QUICKSTART.md)** - Quick start guide
+- **[docs/STRUCTURE.md](docs/STRUCTURE.md)** - Project structure details
 
 ## Important Notes
 
@@ -242,5 +297,8 @@ MIT License - Feel free to use and modify for your needs.
 
 ## Credits
 
-Data source: FCC Universal Licensing System (ULS)
-- https://www.fcc.gov/uls/
+**Data Source:**
+- FCC Universal Licensing System (ULS) - https://www.fcc.gov/uls/
+
+**Inspiration:**
+- Special thanks to [k3ng/hamdb](https://github.com/k3ng/hamdb) for the original HamDB project and API format inspiration
