@@ -10,8 +10,12 @@ venv/
 env/
 ENV/
 
-# Output directory
-output/
+# Output directory - ignore all generated content except 404.json
+output/*
+!output/404.json
+
+# Database
+hamqrzdb.sqlite
 
 # Temporary ULS data
 temp_uls/
@@ -39,7 +43,3 @@ dist-config*.json
 
 # Zip files
 *.zip
-
-# Ignore Output
-output/
-hamqrzdb.sqlite

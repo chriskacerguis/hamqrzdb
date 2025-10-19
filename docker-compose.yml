@@ -1,15 +1,11 @@
 services:
-  hamqrzdb:
+  nginx:
     image: nginx:alpine
     ports:
       - "80:80"
     restart: unless-stopped
     volumes:
-      # Bind mount the nginx configuration
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      # Bind mount the 404.json file
-      - ./404.json:/usr/share/nginx/html/404.json:ro
-      # Bind mount the output directory (required)
       - ./output:/usr/share/nginx/html:ro
     environment:
       - NGINX_ENTRYPOINT_QUIET_LOGS=1
