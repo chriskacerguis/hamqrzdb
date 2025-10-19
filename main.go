@@ -143,19 +143,22 @@ func handleCallsignLookup(w http.ResponseWriter, r *http.Request) {
 func lookupCallsign(callsign string) (CallsignData, bool) {
 	query := `
 		SELECT 
-			callsign, operator_class, expires, status,
-			grid, lat, lon,
-			first_name, middle_initial, last_name, suffix,
-			address_line_1, address_line_2, state, zip, country
+			callsign, operator_class, expired_date, license_status,
+			grid_square, latitude, longitude,
+			first_name, mi, last_name, suffix,
+			street_address, city, state, zip_code, 'United States' as country
 		FROM callsigns
 		WHERE UPPER(callsign) = UPPER(?)
 		LIMIT 1
 	`
 
 	var data CallsignData
+	var lat, lon sql.NullFloat64
+	var gridSquare, expiredDate sql.NullString
+	
 	err := db.QueryRow(query, callsign).Scan(
-		&data.Call, &data.Class, &data.Expires, &data.Status,
-		&data.Grid, &data.Lat, &data.Lon,
+		&data.Call, &data.Class, &expiredDate, &data.Status,
+		&gridSquare, &lat, &lon,
 		&data.FName, &data.MI, &data.Name, &data.Suffix,
 		&data.Addr1, &data.Addr2, &data.State, &data.Zip, &data.Country,
 	)
@@ -167,6 +170,20 @@ func lookupCallsign(callsign string) (CallsignData, bool) {
 	if err != nil {
 		log.Printf("Database error looking up %s: %v", callsign, err)
 		return CallsignData{}, false
+	}
+
+	// Convert nullable fields to strings
+	if expiredDate.Valid {
+		data.Expires = expiredDate.String
+	}
+	if gridSquare.Valid {
+		data.Grid = gridSquare.String
+	}
+	if lat.Valid {
+		data.Lat = fmt.Sprintf("%.7f", lat.Float64)
+	}
+	if lon.Valid {
+		data.Lon = fmt.Sprintf("%.7f", lon.Float64)
 	}
 
 	return data, true
