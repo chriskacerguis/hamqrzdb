@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   hamqrzdb:
-    image: ghcr.io/chriskacerguis/hamqrzdb:sha-816abbe
+    image: ghcr.io/chriskacerguis/hamqrzdb:latest
     ports:
       - "80:80"
     restart: unless-stopped
