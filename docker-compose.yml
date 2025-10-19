@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  hamqrzdb:
+    build: .
+    container_name: hamqrzdb
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    volumes:
+      # Bind mount the output directory (required)
+      - ./output:/usr/share/nginx/html:ro
+    environment:
+      - NGINX_ENTRYPOINT_QUIET_LOGS=1

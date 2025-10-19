@@ -1,0 +1,26 @@
+{
+  "hamdb": {
+    "version": "1",
+    "callsign": {
+      "call": "NOT_FOUND",
+      "class": "NOT_FOUND",
+      "expires": "NOT_FOUND",
+      "status": "NOT_FOUND",
+      "grid": "NOT_FOUND",
+      "lat": "NOT_FOUND",
+      "lon": "NOT_FOUND",
+      "fname": "NOT_FOUND",
+      "mi": "NOT_FOUND",
+      "name": "NOT_FOUND",
+      "suffix": "NOT_FOUND",
+      "addr1": "NOT_FOUND",
+      "addr2": "NOT_FOUND",
+      "state": "NOT_FOUND",
+      "zip": "NOT_FOUND",
+      "country": "NOT_FOUND"
+    },
+    "messages": {
+      "status": "NOT_FOUND"
+    }
+  }
+}

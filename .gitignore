@@ -1,0 +1,44 @@
+# Ignore Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Output directory
+output/
+
+# Temporary ULS data
+temp_uls/
+
+# Logs
+logs/
+*.log
+
+# AWS
+.aws/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Distribution configs (may contain sensitive data)
+dist-config*.json
+
+# Zip files
+*.zip
+
+# Ignore Output
+output/
