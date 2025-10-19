@@ -10,9 +10,10 @@ venv/
 env/
 ENV/
 
-# Output directory - ignore all generated content except 404.json
+# Output directory - ignore all generated content except 404.json and index.html
 output/*
 !output/404.json
+!output/index.html
 
 # Database
 hamqrzdb.sqlite
