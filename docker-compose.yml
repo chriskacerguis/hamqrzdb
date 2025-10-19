@@ -4,7 +4,7 @@ services:
   hamqrzdb:
     image: ghcr.io/chriskacerguis/hamqrzdb:sha-816abbe
     ports:
-      - "8080:80"
+      - "80:80"
     restart: unless-stopped
     volumes:
       # Bind mount the output directory (required)
