@@ -154,13 +154,13 @@ func lookupCallsign(callsign string) (CallsignData, bool) {
 
 	var data CallsignData
 	var lat, lon sql.NullFloat64
-	var gridSquare, expiredDate sql.NullString
+	var gridSquare, expiredDate, mi, suffix, streetAddress, city, state, zipCode sql.NullString
 
 	err := db.QueryRow(query, callsign).Scan(
 		&data.Call, &data.Class, &expiredDate, &data.Status,
 		&gridSquare, &lat, &lon,
-		&data.FName, &data.MI, &data.Name, &data.Suffix,
-		&data.Addr1, &data.Addr2, &data.State, &data.Zip, &data.Country,
+		&data.FName, &mi, &data.Name, &suffix,
+		&streetAddress, &city, &state, &zipCode, &data.Country,
 	)
 
 	if err == sql.ErrNoRows {
@@ -185,11 +185,27 @@ func lookupCallsign(callsign string) (CallsignData, bool) {
 	if lon.Valid {
 		data.Lon = fmt.Sprintf("%.7f", lon.Float64)
 	}
+	if mi.Valid {
+		data.MI = mi.String
+	}
+	if suffix.Valid {
+		data.Suffix = suffix.String
+	}
+	if streetAddress.Valid {
+		data.Addr1 = streetAddress.String
+	}
+	if city.Valid {
+		data.Addr2 = city.String
+	}
+	if state.Valid {
+		data.State = state.String
+	}
+	if zipCode.Valid {
+		data.Zip = zipCode.String
+	}
 
 	return data, true
-}
-
-// writeNotFound writes a NOT_FOUND response
+} // writeNotFound writes a NOT_FOUND response
 func writeNotFound(w http.ResponseWriter, callsign string) {
 	response := HamDBResponse{
 		HamDB: HamDBData{
