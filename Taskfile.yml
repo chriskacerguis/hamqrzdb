@@ -19,7 +19,6 @@ tasks:
     deps:
       - build:api
       - build:process
-      - build:locations
     cmds:
       - echo "✅ Build complete!"
       - task: info
@@ -47,18 +46,6 @@ tasks:
       - mkdir -p {{.BIN_DIR}}
       - CGO_ENABLED={{.CGO_ENABLED}} go build {{.GOFLAGS}} -o {{.BIN_DIR}}/{{.PROCESS_BINARY}} cmd/process/main.go
       - echo "✓ Built {{.BIN_DIR}}/{{.PROCESS_BINARY}}"
-
-  build:locations:
-    desc: Build locations processor
-    sources:
-      - cmd/locations/main.go
-    generates:
-      - "{{.BIN_DIR}}/{{.LOCATIONS_BINARY}}"
-    cmds:
-      - echo "🔨 Building {{.LOCATIONS_BINARY}}..."
-      - mkdir -p {{.BIN_DIR}}
-      - CGO_ENABLED={{.CGO_ENABLED}} go build {{.GOFLAGS}} -o {{.BIN_DIR}}/{{.LOCATIONS_BINARY}} cmd/locations/main.go
-      - echo "✓ Built {{.BIN_DIR}}/{{.LOCATIONS_BINARY}}"
 
   info:
     desc: Show binary sizes
@@ -193,10 +180,10 @@ tasks:
   db:locations:
     desc: Process location data
     deps:
-      - build:locations
+      - build:process
     cmds:
       - echo "📍 Processing location data..."
-      - ./{{.BIN_DIR}}/{{.LOCATIONS_BINARY}} --la-file {{.CLI_ARGS | default "temp_uls/LA.dat"}} --db hamqrzdb.sqlite
+      - ./{{.BIN_DIR}}/{{.PROCESS_BINARY}} --la-file {{.CLI_ARGS | default "temp_uls/LA.dat"}} --db hamqrzdb.sqlite
 
   db:stats:
     desc: Show database statistics
@@ -229,14 +216,12 @@ tasks:
     desc: Test processing a single callsign
     deps:
       - build:process
-      - build:locations
     cmds:
       - echo "🧪 Testing single callsign processing..."
-      - ./{{.BIN_DIR}}/{{.PROCESS_BINARY}} --full --callsign KJ5DJC --db test.db --output test_output
-      - ./{{.BIN_DIR}}/{{.LOCATIONS_BINARY}} --la-file temp_uls/LA.dat --callsign KJ5DJC --db test.db || true
+      - ./{{.BIN_DIR}}/{{.PROCESS_BINARY}} --full --callsign KJ5DJC --db test.db
+      - ./{{.BIN_DIR}}/{{.PROCESS_BINARY}} --la-file temp_uls/LA.dat --callsign KJ5DJC --db test.db || true
       - echo "✓ Single callsign test complete"
       - rm -f test.db test.db-shm test.db-wal
-      - rm -rf test_output
 
   # Formatting and linting
   fmt:

@@ -17,11 +17,8 @@ COPY cmd/ ./cmd/
 # Build the API binary with CGO enabled (required for go-sqlite3)
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o hamqrzdb-api .
 
-# Build the process binary
+# Build the process binary (now includes location processing)
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o hamqrzdb-process ./cmd/process/main.go
-
-# Build the locations binary
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o hamqrzdb-locations ./cmd/locations/main.go
 
 # Final stage - minimal image
 FROM alpine:latest
@@ -30,10 +27,9 @@ RUN apk --no-cache add ca-certificates sqlite-libs wget
 
 WORKDIR /app
 
-# Copy all binaries from builder
+# Copy binaries from builder
 COPY --from=builder /build/hamqrzdb-api .
 COPY --from=builder /build/hamqrzdb-process .
-COPY --from=builder /build/hamqrzdb-locations .
 
 # Copy the index.html file
 COPY html/index.html /app/index.html

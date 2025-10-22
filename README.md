@@ -19,16 +19,14 @@ Built with **Go** for speed and efficiency. Processes FCC ULS data into SQLite a
 
 ## Architecture
 
-**Simple 3-component system:**
+**Simple 2-component system:**
 
-1. **hamqrzdb-process** - Downloads FCC ULS data and populates SQLite database
-2. **hamqrzdb-locations** - Adds coordinates and Maidenhead grid squares (optional)
-3. **hamqrzdb-api** - HTTP server that queries SQLite directly
+1. **hamqrzdb-process** - Downloads FCC ULS data, processes location data, and populates SQLite database
+2. **hamqrzdb-api** - HTTP server that queries SQLite directly
 
 ```
 FCC Data → hamqrzdb-process → SQLite DB → hamqrzdb-api → JSON API
-                                    ↑
-                          hamqrzdb-locations (optional)
+          (ULS + Locations)
 ```
 
 No JSON file generation needed. The API queries the database directly for real-time, zero-downtime updates.
@@ -120,11 +118,14 @@ Location data adds latitude, longitude, and Maidenhead grid squares:
 # Process location data (2-3 minutes)
 task db:locations -- --la-file temp_uls/LA.dat
 
-# Or use binary directly
-./bin/hamqrzdb-locations --la-file temp_uls/LA.dat --db hamqrzdb.sqlite
+# Or use process binary directly
+./bin/hamqrzdb-process --la-file temp_uls/LA.dat --db hamqrzdb.sqlite
 
 # Process single callsign
-./bin/hamqrzdb-locations --la-file temp_uls/LA.dat --callsign KJ5DJC
+./bin/hamqrzdb-process --la-file temp_uls/LA.dat --callsign KJ5DJC
+
+# Or combine with full database processing
+./bin/hamqrzdb-process --full --la-file temp_uls/LA.dat
 ```
 
 **Note:** The full database download includes LA.dat in the `temp_uls/` directory.
@@ -390,12 +391,10 @@ See [docs/TASKFILE-MIGRATION.md](docs/TASKFILE-MIGRATION.md) for migration guide
 hamqrzdb/
 ├── main.go                   # API server source
 ├── cmd/
-│   ├── process/main.go       # Data processor source
-│   └── locations/main.go     # Locations processor source
+│   └── process/main.go       # Data processor source (includes location processing)
 ├── bin/                      # Compiled binaries
 │   ├── hamqrzdb-api
-│   ├── hamqrzdb-process
-│   └── hamqrzdb-locations
+│   └── hamqrzdb-process
 ├── Taskfile.yml              # Task automation configuration
 ├── Dockerfile                # Docker image definition
 ├── docker-compose.yml        # Docker Compose configuration

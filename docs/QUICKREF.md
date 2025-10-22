@@ -4,13 +4,16 @@
 
 ```bash
 # Build tools
-./build.sh
+task build
 
 # Process FCC data
 ./bin/hamqrzdb-process --full
 
 # Add location data (optional)
-./bin/hamqrzdb-locations --la-file temp_uls/LA.dat
+./bin/hamqrzdb-process --la-file temp_uls/LA.dat
+
+# Or process both in one command
+./bin/hamqrzdb-process --full --la-file temp_uls/LA.dat
 
 # Start API
 ./bin/hamqrzdb-api
@@ -19,10 +22,10 @@
 ## 📦 Build Commands
 
 ```bash
-./build.sh              # Easy build script
-make build              # Build both tools
-make clean              # Clean build artifacts
-make install            # Install to /usr/local/bin
+task build              # Build all tools
+task build:process      # Build process binary
+task build:api          # Build API binary
+task clean              # Clean build artifacts
 ```
 
 ## 🔄 Data Processing
@@ -34,14 +37,11 @@ make install            # Install to /usr/local/bin
 # Daily updates  
 ./bin/hamqrzdb-process --daily
 
-# Generate JSON files
-./bin/hamqrzdb-process --generate
-
 # Single callsign
 ./bin/hamqrzdb-process --full --callsign KJ5DJC
 
-# Custom paths
-./bin/hamqrzdb-process --full --db custom.db --output /var/www/data
+# Custom database path
+./bin/hamqrzdb-process --full --db custom.db
 
 # Local file
 ./bin/hamqrzdb-process --file /path/to/l_amat.zip
@@ -51,16 +51,16 @@ make install            # Install to /usr/local/bin
 
 ```bash
 # Add coordinates and grid squares
-./bin/hamqrzdb-locations --la-file temp_uls/LA.dat
+./bin/hamqrzdb-process --la-file temp_uls/LA.dat
 
 # Process single callsign
-./bin/hamqrzdb-locations --la-file temp_uls/LA.dat --callsign KJ5DJC
+./bin/hamqrzdb-process --la-file temp_uls/LA.dat --callsign KJ5DJC
 
 # Custom database
-./bin/hamqrzdb-locations --la-file temp_uls/LA.dat --db custom.db
+./bin/hamqrzdb-process --la-file temp_uls/LA.dat --db custom.db
 
-# Note about regeneration
-./bin/hamqrzdb-locations --la-file temp_uls/LA.dat --regenerate
+# Combined with full processing
+./bin/hamqrzdb-process --full --la-file temp_uls/LA.dat
 ```
 
 ## 🌐 API Server
@@ -81,23 +81,23 @@ curl http://localhost:8080/health
 ## 🐳 Docker
 
 ```bash
-make docker-build       # Build image
-make docker-run         # Start services
-make docker-stop        # Stop services
-make docker-logs        # View logs
+task docker:build       # Build image
+task docker:up          # Start services
+task docker:down        # Stop services
+task docker:logs        # View logs
 ```
 
 ## 💾 Database
 
 ```bash
-make db-full           # Full download & process
-make db-daily          # Daily updates
-make db-generate       # Generate JSON files
-make db-stats          # Show statistics
+task db:full           # Full download & process
+task db:daily          # Daily updates
+task db:locations      # Process location data
+task db:stats          # Show statistics
 
 # Direct SQLite queries
 sqlite3 hamqrzdb.sqlite "SELECT COUNT(*) FROM callsigns;"
-sqlite3 hamqrzdb.sqlite "SELECT * FROM callsigns WHERE UPPER(callsign) = 'KJ5DJC';"
+sqlite3 hamqrzdb.sqlite "SELECT * FROM callsigns WHERE call = 'KJ5DJC';"
 ```
 
 ## ⚡ Performance
@@ -106,17 +106,14 @@ sqlite3 hamqrzdb.sqlite "SELECT * FROM callsigns WHERE UPPER(callsign) = 'KJ5DJC
 |------|--------|-----|---------|
 | Full DB | 15-20 min | 3-5 min | **4-5x** |
 | Daily | 2-3 min | 20-30 sec | **4-6x** |
-| JSON | 25-30 min | 5-10 min | **3-5x** |
 | Memory | ~500 MB | ~100 MB | **5x less** |
 
 ## 📄 File Locations
 
 ```
-bin/hamqrzdb-process    # Data processor binary
-bin/hamqrzdb-locations  # Locations processor binary
-bin/hamqrzdb-api        # API server binary
+bin/hamqrzdb-process    # Data & location processor binary (~6.8 MB)
+bin/hamqrzdb-api        # API server binary (~6.7 MB)
 hamqrzdb.sqlite         # Database (~500 MB)
-output/                 # JSON files (~2 GB, optional)
 ```
 
 ## 🔧 Automation

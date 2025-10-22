@@ -6,7 +6,7 @@ Go-based command-line tools for processing FCC ULS Amateur Radio data.
 
 HamQRZDB provides two main CLI tools:
 
-1. **`hamqrzdb-process`** - Download and process FCC data into SQLite database
+1. **`hamqrzdb-process`** - Download and process FCC data (including locations) into SQLite database
 2. **`hamqrzdb-api`** - Serve callsign lookups via HTTP API
 
 These tools are **10-20x faster** than the Python equivalent and provide better memory efficiency.
@@ -22,7 +22,6 @@ task build
 # Or build individually
 task build:process
 task build:api
-task build:locations
 ```
 
 ### Process FCC Data
@@ -34,8 +33,11 @@ task build:locations
 # Download and process daily updates (~30 seconds)
 ./bin/hamqrzdb-process --daily
 
-# Generate JSON files from existing database
-./bin/hamqrzdb-process --generate
+# Process location data
+./bin/hamqrzdb-process --la-file temp_uls/LA.dat
+
+# Process full database with locations in one command
+./bin/hamqrzdb-process --full --la-file temp_uls/LA.dat
 
 # Process a specific callsign only
 ./bin/hamqrzdb-process --full --callsign KJ5DJC
