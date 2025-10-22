@@ -1,4 +1,4 @@
-# Multi-stage build for Go API server
+# Multi-stage build for Go binaries
 FROM golang:1.25-alpine AS builder
 
 # Install build dependencies for SQLite
@@ -12,19 +12,28 @@ RUN go mod download
 
 # Copy source code
 COPY main.go ./
+COPY cmd/ ./cmd/
 
-# Build the binary with CGO enabled (required for go-sqlite3)
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o hamqrzdb-api .
+# Build the API binary with CGO enabled (required for go-sqlite3)
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o hamqrzdb-api .
+
+# Build the process binary
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o hamqrzdb-process ./cmd/process/main.go
+
+# Build the locations binary
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o hamqrzdb-locations ./cmd/locations/main.go
 
 # Final stage - minimal image
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates sqlite-libs
+RUN apk --no-cache add ca-certificates sqlite-libs wget
 
 WORKDIR /app
 
-# Copy the binary from builder
+# Copy all binaries from builder
 COPY --from=builder /build/hamqrzdb-api .
+COPY --from=builder /build/hamqrzdb-process .
+COPY --from=builder /build/hamqrzdb-locations .
 
 # Copy the index.html file
 COPY html/index.html /app/index.html
@@ -36,5 +45,5 @@ EXPOSE 8080
 ENV DB_PATH=/data/hamqrzdb.sqlite
 ENV PORT=8080
 
-# Run the binary
+# Run the API binary by default
 CMD ["./hamqrzdb-api"]
