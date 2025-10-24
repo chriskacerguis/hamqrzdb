@@ -146,6 +146,10 @@ DB_PATH=./hamqrzdb.sqlite PORT=8080 ./bin/hamqrzdb-api
 task docker:up
 ```
 
+Note:
+- On first run, if no database exists at DB_PATH, the API will create an empty SQLite database with the required schema automatically.
+- If you're using Docker Compose with a read-only bind mount for the database file (e.g., `./hamqrzdb.sqlite:/data/hamqrzdb.sqlite:ro`), ensure the file exists first or remove the `:ro` for the initial bootstrap so the API can create it.
+
 ### Database Statistics
 
 ```bash

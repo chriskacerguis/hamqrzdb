@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -57,11 +58,11 @@ func main() {
 		port = "8080"
 	}
 
-	// Open database connection
+	// Ensure database exists (create schema if missing) and open read-only connection
 	var err error
-	db, err = sql.Open("sqlite3", dbPath+"?cache=shared&mode=ro")
+	db, err = ensureDatabase(dbPath)
 	if err != nil {
-		log.Fatalf("Failed to open database: %v", err)
+		log.Fatalf("Database initialization error: %v", err)
 	}
 	defer db.Close()
 
@@ -87,6 +88,84 @@ func main() {
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+}
+
+// ensureDatabase verifies the database file exists at path. If it doesn't,
+// it creates a new SQLite database with the required schema, then returns a
+// read-only connection suitable for serving API traffic.
+func ensureDatabase(dbPath string) (*sql.DB, error) {
+	// If file doesn't exist, attempt to create it with the schema
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		log.Printf("Database not found at %s; creating new database with schema...", dbPath)
+
+		// Ensure parent directory exists
+		if dir := filepath.Dir(dbPath); dir != "." && dir != "" {
+			if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
+				return nil, fmt.Errorf("failed to create parent directory %s: %w", dir, mkErr)
+			}
+		}
+
+		// Open writeable connection to create schema
+		wdb, openErr := sql.Open("sqlite3", dbPath)
+		if openErr != nil {
+			return nil, fmt.Errorf("failed to open database for creation: %w", openErr)
+		}
+
+		if err := createSchema(wdb); err != nil {
+			_ = wdb.Close()
+			return nil, fmt.Errorf("failed to create schema: %w", err)
+		}
+		if closeErr := wdb.Close(); closeErr != nil {
+			log.Printf("Warning: error closing writeable DB handle: %v", closeErr)
+		}
+	}
+
+	// Open read-only connection for serving
+	ro, err := sql.Open("sqlite3", dbPath+"?cache=shared&mode=ro")
+	if err != nil {
+		// Provide a clearer hint if the failure is due to read-only mount on first start
+		return nil, fmt.Errorf("failed to open database (read-only). If this is first start, ensure the DB file is writable or pre-created at %s: %w", dbPath, err)
+	}
+	return ro, nil
+}
+
+// createSchema creates the database schema required by the API. This mirrors
+// the schema used by hamqrzdb-process to ensure compatibility.
+func createSchema(dbc *sql.DB) error {
+	schema := `
+	CREATE TABLE IF NOT EXISTS callsigns (
+		callsign TEXT PRIMARY KEY,
+		license_status TEXT,
+		radio_service_code TEXT,
+		grant_date TEXT,
+		expired_date TEXT,
+		cancellation_date TEXT,
+		operator_class TEXT,
+		group_code TEXT,
+		region_code TEXT,
+		first_name TEXT,
+		mi TEXT,
+		last_name TEXT,
+		suffix TEXT,
+		entity_name TEXT,
+		street_address TEXT,
+		city TEXT,
+		state TEXT,
+		zip_code TEXT,
+		latitude REAL,
+		longitude REAL,
+		grid_square TEXT,
+		last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_callsign ON callsigns(callsign);
+	CREATE INDEX IF NOT EXISTS idx_status ON callsigns(license_status);
+	`
+
+	if _, err := dbc.Exec(schema); err != nil {
+		return err
+	}
+	return nil
 }
 
 // corsMiddleware adds CORS headers to all responses
