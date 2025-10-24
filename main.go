@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -44,7 +45,22 @@ type CallsignData struct {
 	Country string `json:"country"`
 }
 
-var db *sql.DB
+var (
+	db   *sql.DB
+	dbMu sync.RWMutex
+)
+
+func setDB(d *sql.DB) {
+	dbMu.Lock()
+	db = d
+	dbMu.Unlock()
+}
+
+func getDB() *sql.DB {
+	dbMu.RLock()
+	defer dbMu.RUnlock()
+	return db
+}
 
 func main() {
 	// Get configuration from environment
@@ -60,23 +76,34 @@ func main() {
 
 	// Ensure database exists (create schema if missing) and open read-only connection
 	var err error
-	db, err = ensureDatabase(dbPath)
+	conn, err := ensureDatabase(dbPath)
 	if err != nil {
-		log.Fatalf("Database initialization error: %v", err)
+		// Don't exit; start without DB and allow it to be created/populated later
+		log.Printf("Database not ready: %v", err)
+		setDB(nil)
+	} else {
+		setDB(conn)
 	}
-	defer db.Close()
+	defer func() {
+		if d := getDB(); d != nil {
+			_ = d.Close()
+		}
+	}()
 
-	// Configure connection pool
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(5 * time.Minute)
-
-	// Test database connection
-	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+	// If DB is connected, configure pool; otherwise begin background connector
+	if d := getDB(); d != nil {
+		d.SetMaxOpenConns(25)
+		d.SetMaxIdleConns(5)
+		d.SetConnMaxLifetime(5 * time.Minute)
+		if err := d.Ping(); err != nil {
+			log.Printf("Failed to connect to database: %v", err)
+		} else {
+			log.Printf("Connected to database: %s", dbPath)
+		}
 	}
 
-	log.Printf("Connected to database: %s", dbPath)
+	// Start background connector to attach when DB becomes available
+	startDBConnector(dbPath)
 
 	// Setup HTTP handlers
 	http.HandleFunc("/v1/", corsMiddleware(handleCallsignLookup))
@@ -96,28 +123,12 @@ func main() {
 func ensureDatabase(dbPath string) (*sql.DB, error) {
 	// If file doesn't exist, attempt to create it with the schema
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		log.Printf("Database not found at %s; creating new database with schema...", dbPath)
-
-		// Ensure parent directory exists
+		// If missing, don't force-create; allow container to start and DB to be built separately
+		// Ensure parent directory exists if it's not a file bind mount
 		if dir := filepath.Dir(dbPath); dir != "." && dir != "" {
-			if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
-				return nil, fmt.Errorf("failed to create parent directory %s: %w", dir, mkErr)
-			}
+			_ = os.MkdirAll(dir, 0o755)
 		}
-
-		// Open writeable connection to create schema
-		wdb, openErr := sql.Open("sqlite3", dbPath)
-		if openErr != nil {
-			return nil, fmt.Errorf("failed to open database for creation: %w", openErr)
-		}
-
-		if err := createSchema(wdb); err != nil {
-			_ = wdb.Close()
-			return nil, fmt.Errorf("failed to create schema: %w", err)
-		}
-		if closeErr := wdb.Close(); closeErr != nil {
-			log.Printf("Warning: error closing writeable DB handle: %v", closeErr)
-		}
+		return nil, fmt.Errorf("database file not found at %s", dbPath)
 	}
 
 	// Open read-only connection for serving
@@ -129,43 +140,42 @@ func ensureDatabase(dbPath string) (*sql.DB, error) {
 	return ro, nil
 }
 
-// createSchema creates the database schema required by the API. This mirrors
-// the schema used by hamqrzdb-process to ensure compatibility.
-func createSchema(dbc *sql.DB) error {
-	schema := `
-	CREATE TABLE IF NOT EXISTS callsigns (
-		callsign TEXT PRIMARY KEY,
-		license_status TEXT,
-		radio_service_code TEXT,
-		grant_date TEXT,
-		expired_date TEXT,
-		cancellation_date TEXT,
-		operator_class TEXT,
-		group_code TEXT,
-		region_code TEXT,
-		first_name TEXT,
-		mi TEXT,
-		last_name TEXT,
-		suffix TEXT,
-		entity_name TEXT,
-		street_address TEXT,
-		city TEXT,
-		state TEXT,
-		zip_code TEXT,
-		latitude REAL,
-		longitude REAL,
-		grid_square TEXT,
-		last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	);
+// Note: Schema creation is handled by the processor; the API attaches in
+// read-only mode and will connect once the DB file exists.
 
-	CREATE INDEX IF NOT EXISTS idx_callsign ON callsigns(callsign);
-	CREATE INDEX IF NOT EXISTS idx_status ON callsigns(license_status);
-	`
-
-	if _, err := dbc.Exec(schema); err != nil {
-		return err
-	}
-	return nil
+// startDBConnector periodically attempts to connect to the database in read-only
+// mode. This allows the API to start before the DB exists and attach later once
+// the database file is created/populated by a separate process.
+func startDBConnector(dbPath string) {
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			if getDB() != nil {
+				// Optionally verify connection remains healthy
+				if err := getDB().Ping(); err != nil {
+					log.Printf("Database connection lost: %v", err)
+					d := getDB()
+					if d != nil {
+						_ = d.Close()
+					}
+					setDB(nil)
+				}
+				continue
+			}
+			// Attempt to connect
+			conn, err := sql.Open("sqlite3", dbPath+"?cache=shared&mode=ro")
+			if err != nil {
+				continue
+			}
+			if err := conn.Ping(); err != nil {
+				_ = conn.Close()
+				continue
+			}
+			setDB(conn)
+			log.Printf("Database connected: %s", dbPath)
+		}
+	}()
 }
 
 // corsMiddleware adds CORS headers to all responses
@@ -220,6 +230,10 @@ func handleCallsignLookup(w http.ResponseWriter, r *http.Request) {
 
 // lookupCallsign queries the database for a callsign (case-insensitive)
 func lookupCallsign(callsign string) (CallsignData, bool) {
+    if getDB() == nil {
+        // DB not ready yet
+        return CallsignData{}, false
+    }
 	query := `
 		SELECT 
 			callsign, operator_class, expired_date, license_status,
@@ -235,7 +249,7 @@ func lookupCallsign(callsign string) (CallsignData, bool) {
 	var lat, lon sql.NullFloat64
 	var gridSquare, expiredDate, mi, suffix, streetAddress, city, state, zipCode sql.NullString
 
-	err := db.QueryRow(query, callsign).Scan(
+    err := getDB().QueryRow(query, callsign).Scan(
 		&data.Call, &data.Class, &expiredDate, &data.Status,
 		&gridSquare, &lat, &lon,
 		&data.FName, &mi, &data.Name, &suffix,
@@ -319,12 +333,13 @@ func writeNotFound(w http.ResponseWriter, callsign string) {
 // handleHealth handles /health requests
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	// Test database connection
-	if err := db.Ping(); err != nil {
+	d := getDB()
+	if d == nil || d.Ping() != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		json.NewEncoder(w).Encode(map[string]string{
 			"status": "unhealthy",
-			"error":  err.Error(),
+			"error":  "database not connected",
 		})
 		return
 	}

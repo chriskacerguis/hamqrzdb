@@ -147,8 +147,13 @@ task docker:up
 ```
 
 Note:
-- On first run, if no database exists at DB_PATH, the API will create an empty SQLite database with the required schema automatically.
-- If you're using Docker Compose with a read-only bind mount for the database file (e.g., `./hamqrzdb.sqlite:/data/hamqrzdb.sqlite:ro`), ensure the file exists first or remove the `:ro` for the initial bootstrap so the API can create it.
+- The API starts even if the database at DB_PATH doesn't exist yet. It will periodically attempt to connect in the background and become healthy as soon as the DB appears.
+- To create/populate the database, run the `hamqrzdb-process` tool (locally or inside the container) and point it at DB_PATH.
+- If you use a read-only bind mount for the DB file (e.g., `./hamqrzdb.sqlite:/data/hamqrzdb.sqlite:ro`), ensure the file exists first or perform the initial build without `:ro`.
+
+Health behavior:
+- `/health` returns `{status: "unhealthy"}` until the API can connect to the database (file present and readable).
+- After the DB is created and populated, the API will auto-connect within ~5 seconds and `/health` returns `{status: "healthy"}`.
 
 ### Database Statistics
 
@@ -265,10 +270,21 @@ task docker:down
 # Build image
 docker build -t hamqrzdb-api:latest .
 
-# Run container
+# Run container (no host mount; DB lives at /data/hamqrzdb.sqlite inside container)
 docker run -d \
   -p 8080:8080 \
-  -v $(pwd)/hamqrzdb.sqlite:/app/hamqrzdb.sqlite \
+  --name hamqrzdb-api \
+  hamqrzdb-api:latest
+
+# Create the database inside the running container
+docker exec -it hamqrzdb-api /app/hamqrzdb-process --full --db /data/hamqrzdb.sqlite
+
+# Optional: bind-mount a host path for persistence
+docker rm -f hamqrzdb-api
+docker run -d \
+  -p 8080:8080 \
+  -e DB_PATH=/data/hamqrzdb.sqlite \
+  -v $(pwd)/hamqrzdb.sqlite:/data/hamqrzdb.sqlite \
   --name hamqrzdb-api \
   hamqrzdb-api:latest
 ```

@@ -27,6 +27,9 @@ RUN apk --no-cache add ca-certificates sqlite-libs wget
 
 WORKDIR /app
 
+# Create data directory for the SQLite database (default DB_PATH)
+RUN mkdir -p /data
+
 # Copy binaries from builder
 COPY --from=builder /build/hamqrzdb-api .
 COPY --from=builder /build/hamqrzdb-process .
@@ -40,6 +43,9 @@ EXPOSE 8080
 # Set default environment variables
 ENV DB_PATH=/data/hamqrzdb.sqlite
 ENV PORT=8080
+
+# Declare /data as a mount point for optional host persistence
+VOLUME ["/data"]
 
 # Run the API binary by default
 CMD ["./hamqrzdb-api"]

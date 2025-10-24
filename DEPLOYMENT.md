@@ -87,6 +87,25 @@ curl http://localhost:8080/health
 docker-compose logs --tail=50 api
 ```
 
+## First-Run Database Bootstrap
+
+The API can start without a database and will attach automatically once the file exists. To build the database inside the running container:
+
+```bash
+# Full database build inside container
+docker-compose exec api /app/hamqrzdb-process --full --db /data/hamqrzdb.sqlite
+
+# Daily updates
+docker-compose exec api /app/hamqrzdb-process --daily --db /data/hamqrzdb.sqlite
+
+# Add location data (if you have LA.dat available inside the container)
+docker-compose exec api /app/hamqrzdb-process --la-file /data/LA.dat --db /data/hamqrzdb.sqlite
+```
+
+Health endpoint behavior:
+- Before the DB exists or is readable, `/health` returns unhealthy and the container healthcheck may show starting/unhealthy.
+- Within ~5 seconds after the DB file is created, the API will auto-connect and `/health` will return healthy.
+
 ## Troubleshooting
 
 ### Container won't start
