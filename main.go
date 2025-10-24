@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 	"sync"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -230,10 +230,10 @@ func handleCallsignLookup(w http.ResponseWriter, r *http.Request) {
 
 // lookupCallsign queries the database for a callsign (case-insensitive)
 func lookupCallsign(callsign string) (CallsignData, bool) {
-    if getDB() == nil {
-        // DB not ready yet
-        return CallsignData{}, false
-    }
+	if getDB() == nil {
+		// DB not ready yet
+		return CallsignData{}, false
+	}
 	query := `
 		SELECT 
 			callsign, operator_class, expired_date, license_status,
@@ -249,7 +249,7 @@ func lookupCallsign(callsign string) (CallsignData, bool) {
 	var lat, lon sql.NullFloat64
 	var gridSquare, expiredDate, mi, suffix, streetAddress, city, state, zipCode sql.NullString
 
-    err := getDB().QueryRow(query, callsign).Scan(
+	err := getDB().QueryRow(query, callsign).Scan(
 		&data.Call, &data.Class, &expiredDate, &data.Status,
 		&gridSquare, &lat, &lon,
 		&data.FName, &mi, &data.Name, &suffix,
