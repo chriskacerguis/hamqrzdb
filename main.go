@@ -248,11 +248,12 @@ func lookupCallsign(callsign string) (CallsignData, bool) {
 	var data CallsignData
 	var lat, lon sql.NullFloat64
 	var gridSquare, expiredDate, mi, suffix, streetAddress, city, state, zipCode sql.NullString
+	var firstName, lastName sql.NullString
 
 	err := getDB().QueryRow(query, callsign).Scan(
 		&data.Call, &data.Status, &expiredDate, &data.Class,
 		&gridSquare, &lat, &lon,
-		&data.FName, &mi, &data.Name, &suffix,
+		&firstName, &mi, &lastName, &suffix,
 		&streetAddress, &city, &state, &zipCode, &data.Country,
 	)
 
@@ -265,10 +266,16 @@ func lookupCallsign(callsign string) (CallsignData, bool) {
 		log.Printf("Database error looking up %s: %v", callsign, err)
 		return CallsignData{}, false
 	}
-	
+
 	log.Printf("Successfully found callsign: %s (status: %s, class: %s)", data.Call, data.Status, data.Class)
 
 	// Convert nullable fields to strings
+	if firstName.Valid {
+		data.FName = firstName.String
+	}
+	if lastName.Valid {
+		data.Name = lastName.String
+	}
 	if expiredDate.Valid {
 		data.Expires = expiredDate.String
 	}
