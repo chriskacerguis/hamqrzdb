@@ -236,7 +236,7 @@ func lookupCallsign(callsign string) (CallsignData, bool) {
 	}
 	query := `
 		SELECT 
-			callsign, operator_class, expired_date, license_status,
+			callsign, license_status, expired_date, operator_class,
 			grid_square, latitude, longitude,
 			first_name, mi, last_name, suffix,
 			street_address, city, state, zip_code, 'United States' as country
@@ -250,7 +250,7 @@ func lookupCallsign(callsign string) (CallsignData, bool) {
 	var gridSquare, expiredDate, mi, suffix, streetAddress, city, state, zipCode sql.NullString
 
 	err := getDB().QueryRow(query, callsign).Scan(
-		&data.Call, &data.Class, &expiredDate, &data.Status,
+		&data.Call, &data.Status, &expiredDate, &data.Class,
 		&gridSquare, &lat, &lon,
 		&data.FName, &mi, &data.Name, &suffix,
 		&streetAddress, &city, &state, &zipCode, &data.Country,
