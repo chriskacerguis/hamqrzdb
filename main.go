@@ -257,6 +257,7 @@ func lookupCallsign(callsign string) (CallsignData, bool) {
 	)
 
 	if err == sql.ErrNoRows {
+		log.Printf("No rows found for callsign: %s", callsign)
 		return CallsignData{}, false
 	}
 
@@ -264,6 +265,8 @@ func lookupCallsign(callsign string) (CallsignData, bool) {
 		log.Printf("Database error looking up %s: %v", callsign, err)
 		return CallsignData{}, false
 	}
+	
+	log.Printf("Successfully found callsign: %s (status: %s, class: %s)", data.Call, data.Status, data.Class)
 
 	// Convert nullable fields to strings
 	if expiredDate.Valid {
