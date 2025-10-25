@@ -29,8 +29,9 @@ docker-compose.yml
 # Ignore SSL certificates
 certbot/
 
-# Ignore shell scripts
+# Ignore shell scripts (except docker-entrypoint.sh)
 *.sh
+!docker-entrypoint.sh
 
 # Ignore CloudFront/AWS files (legacy)
 cloudfront-*.js
