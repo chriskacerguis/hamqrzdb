@@ -37,6 +37,10 @@ COPY --from=builder /build/hamqrzdb-process .
 # Copy the index.html file
 COPY html/index.html /app/index.html
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Expose port
 EXPOSE 8080
 
@@ -47,5 +51,5 @@ ENV PORT=8080
 # Declare /data as a mount point for optional host persistence
 VOLUME ["/data"]
 
-# Run the API binary by default
-CMD ["./hamqrzdb-api"]
+# Use entrypoint script to auto-create database if needed
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
