@@ -6,14 +6,8 @@
 # Build tools
 task build
 
-# Process FCC data
+# Process FCC data (includes location data automatically)
 ./bin/hamqrzdb-process --full
-
-# Add location data (optional)
-./bin/hamqrzdb-process --la-file temp_uls/LA.dat
-
-# Or process both in one command
-./bin/hamqrzdb-process --full --la-file temp_uls/LA.dat
 
 # Start API
 ./bin/hamqrzdb-api
@@ -31,7 +25,7 @@ task clean              # Clean build artifacts
 ## 🔄 Data Processing
 
 ```bash
-# Full database
+# Full database (includes location data)
 ./bin/hamqrzdb-process --full
 
 # Daily updates  
@@ -45,22 +39,6 @@ task clean              # Clean build artifacts
 
 # Local file
 ./bin/hamqrzdb-process --file /path/to/l_amat.zip
-```
-
-## 📍 Location Data
-
-```bash
-# Add coordinates and grid squares
-./bin/hamqrzdb-process --la-file temp_uls/LA.dat
-
-# Process single callsign
-./bin/hamqrzdb-process --la-file temp_uls/LA.dat --callsign KJ5DJC
-
-# Custom database
-./bin/hamqrzdb-process --la-file temp_uls/LA.dat --db custom.db
-
-# Combined with full processing
-./bin/hamqrzdb-process --full --la-file temp_uls/LA.dat
 ```
 
 ## 🌐 API Server
@@ -90,9 +68,8 @@ task docker:logs        # View logs
 ## 💾 Database
 
 ```bash
-task db:full           # Full download & process
+task db:full           # Full download & process (includes locations)
 task db:daily          # Daily updates
-task db:locations      # Process location data
 task db:stats          # Show statistics
 
 # Direct SQLite queries

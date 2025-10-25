@@ -919,21 +919,17 @@ func main() {
 	fileFlag := flag.String("file", "", "Process a specific ZIP file")
 	dbFlag := flag.String("db", "hamqrzdb.sqlite", "SQLite database path")
 	callsignFlag := flag.String("callsign", "", "Process only a specific callsign (requires -full, -daily, or -file)")
-	laFileFlag := flag.String("la-file", "", "Process location data from LA.dat file (can be used with or without -full/-daily/-file)")
 
 	flag.Parse()
 
-	// Allow --la-file to be used standalone or with other flags
-	if !*fullFlag && !*dailyFlag && *fileFlag == "" && *laFileFlag == "" {
-		fmt.Fprintln(os.Stderr, "Error: You must specify one of: -full, -daily, -file, or -la-file")
+	if !*fullFlag && !*dailyFlag && *fileFlag == "" {
+		fmt.Fprintln(os.Stderr, "Error: You must specify one of: -full, -daily, or -file")
 		fmt.Fprintln(os.Stderr, "")
 		fmt.Fprintln(os.Stderr, "Examples:")
 		fmt.Fprintln(os.Stderr, "  hamqrzdb-process -full                       # Download and process full database")
 		fmt.Fprintln(os.Stderr, "  hamqrzdb-process -full -callsign KJ5DJC      # Process only KJ5DJC")
 		fmt.Fprintln(os.Stderr, "  hamqrzdb-process -daily                      # Download and process daily updates")
 		fmt.Fprintln(os.Stderr, "  hamqrzdb-process -file l_amat.zip            # Process specific ZIP file")
-		fmt.Fprintln(os.Stderr, "  hamqrzdb-process -la-file LA.dat             # Process location data only")
-		fmt.Fprintln(os.Stderr, "  hamqrzdb-process -full -la-file LA.dat       # Process full database + locations")
 		fmt.Fprintln(os.Stderr, "")
 		flag.Usage()
 		os.Exit(1)
@@ -945,75 +941,72 @@ func main() {
 	}
 	defer processor.Close()
 
-	// Process ULS data if requested
-	if *fullFlag || *dailyFlag || *fileFlag != "" {
-		// Create temporary directory for downloads
-		tempDir, err := os.MkdirTemp("", "uls-*")
-		if err != nil {
-			log.Fatalf("Failed to create temp directory: %v", err)
+	// Create temporary directory for downloads
+	tempDir, err := os.MkdirTemp("", "uls-*")
+	if err != nil {
+		log.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	var zipFile string
+
+	if *fullFlag {
+		// Download full database
+		zipFile = filepath.Join(tempDir, "l_amat.zip")
+		if err := processor.DownloadFile(FullDatabaseURL, zipFile); err != nil {
+			log.Fatalf("Failed to download: %v", err)
 		}
-		defer os.RemoveAll(tempDir)
+	} else if *dailyFlag {
+		// Download daily updates
+		today := time.Now().Format("01022006")
+		url := fmt.Sprintf(DailyUpdateURLFmt, today)
+		zipFile = filepath.Join(tempDir, fmt.Sprintf("l_am_%s.zip", today))
 
-		var zipFile string
-
-		if *fullFlag {
-			// Download full database
-			zipFile = filepath.Join(tempDir, "l_amat.zip")
-			if err := processor.DownloadFile(FullDatabaseURL, zipFile); err != nil {
-				log.Fatalf("Failed to download: %v", err)
-			}
-		} else if *dailyFlag {
-			// Download daily updates
-			today := time.Now().Format("01022006")
-			url := fmt.Sprintf(DailyUpdateURLFmt, today)
-			zipFile = filepath.Join(tempDir, fmt.Sprintf("l_am_%s.zip", today))
-
-			if err := processor.DownloadFile(url, zipFile); err != nil {
-				log.Fatalf("Daily file not available. Try --full instead: %v", err)
-			}
-		} else if *fileFlag != "" {
-			zipFile = *fileFlag
-			if _, err := os.Stat(zipFile); os.IsNotExist(err) {
-				log.Fatalf("File not found: %s", zipFile)
-			}
+		if err := processor.DownloadFile(url, zipFile); err != nil {
+			log.Fatalf("Daily file not available. Try --full instead: %v", err)
 		}
-
-		// Extract ZIP file
-		extractDir := filepath.Join(tempDir, "extracted")
-		if err := processor.ExtractZip(zipFile, extractDir); err != nil {
-			log.Fatalf("Failed to extract: %v", err)
+	} else if *fileFlag != "" {
+		zipFile = *fileFlag
+		if _, err := os.Stat(zipFile); os.IsNotExist(err) {
+			log.Fatalf("File not found: %s", zipFile)
 		}
-
-		// Check for required files
-		hdFile := filepath.Join(extractDir, "HD.dat")
-		enFile := filepath.Join(extractDir, "EN.dat")
-		amFile := filepath.Join(extractDir, "AM.dat")
-
-		for _, f := range []string{hdFile, enFile, amFile} {
-			if _, err := os.Stat(f); os.IsNotExist(err) {
-				log.Fatalf("Required file not found: %s", f)
-			}
-		}
-
-		// Load into database
-		if err := processor.LoadDataFiles(hdFile, enFile, amFile, *callsignFlag); err != nil {
-			log.Fatalf("Failed to load data: %v", err)
-		}
-
-		log.Println("ULS data processing complete!")
 	}
 
-	// Process location data if requested
-	if *laFileFlag != "" {
-		if _, err := os.Stat(*laFileFlag); os.IsNotExist(err) {
-			log.Fatalf("LA file not found: %s", *laFileFlag)
-		}
+	// Extract ZIP file
+	extractDir := filepath.Join(tempDir, "extracted")
+	if err := processor.ExtractZip(zipFile, extractDir); err != nil {
+		log.Fatalf("Failed to extract: %v", err)
+	}
 
-		if err := processor.ProcessLAFile(*laFileFlag, *callsignFlag); err != nil {
-			log.Fatalf("Failed to process location data: %v", err)
-		}
+	// Check for required files
+	hdFile := filepath.Join(extractDir, "HD.dat")
+	enFile := filepath.Join(extractDir, "EN.dat")
+	amFile := filepath.Join(extractDir, "AM.dat")
 
-		log.Println("Location data processing complete!")
+	for _, f := range []string{hdFile, enFile, amFile} {
+		if _, err := os.Stat(f); os.IsNotExist(err) {
+			log.Fatalf("Required file not found: %s", f)
+		}
+	}
+
+	// Load into database
+	if err := processor.LoadDataFiles(hdFile, enFile, amFile, *callsignFlag); err != nil {
+		log.Fatalf("Failed to load data: %v", err)
+	}
+
+	log.Println("ULS data processing complete!")
+
+	// Process location data if LA.dat exists
+	laFile := filepath.Join(extractDir, "LA.dat")
+	if _, err := os.Stat(laFile); err == nil {
+		log.Println("LA.dat found, processing location data...")
+		if err := processor.ProcessLAFile(laFile, *callsignFlag); err != nil {
+			log.Printf("Warning: Failed to process location data: %v", err)
+		} else {
+			log.Println("Location data processing complete!")
+		}
+	} else {
+		log.Println("LA.dat not found in archive, skipping location data")
 	}
 
 	// Final summary

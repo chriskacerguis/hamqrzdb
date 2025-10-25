@@ -27,17 +27,12 @@ task build:api
 ### Process FCC Data
 
 ```bash
-# Download and process full FCC database (~5-10 minutes)
+# Download and process full FCC database (includes location data if available)
+# Takes ~5-10 minutes
 ./bin/hamqrzdb-process --full
 
 # Download and process daily updates (~30 seconds)
 ./bin/hamqrzdb-process --daily
-
-# Process location data
-./bin/hamqrzdb-process --la-file temp_uls/LA.dat
-
-# Process full database with locations in one command
-./bin/hamqrzdb-process --full --la-file temp_uls/LA.dat
 
 # Process a specific callsign only
 ./bin/hamqrzdb-process --full --callsign KJ5DJC
@@ -226,9 +221,8 @@ task --list           # List all available tasks
 
 ```bash
 task dev:api                              # Run API in development mode
-task dev:process -- --full                # Run processor with args
+task dev:process -- --full                # Run processor with args (includes locations)
 task dev:process -- --callsign KJ5DJC     # Process one callsign
-task dev:locations -- --la-file LA.dat    # Run locations processor
 ```
 
 ### Docker Tasks

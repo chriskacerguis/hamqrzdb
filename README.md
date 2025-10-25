@@ -36,37 +36,14 @@ EOF
 # 2. Start the container (creates empty database)
 docker compose up -d
 
-# 3. Populate the database with FCC data (3-5 minutes, one-time)
+# 3. Populate the database with FCC data (3-5 minutes, one-time, includes location data)
 docker compose exec api /app/hamqrzdb-process --full --db /data/hamqrzdb.sqlite
 
 # 4. Test the API
 curl http://localhost:8080/v1/kj5djc/json/test
 ```
 
-**That's it!** The database is persistent across container restarts.
-
-### Adding Location Data (Optional)
-
-Location data adds latitude, longitude, and Maidenhead grid squares to callsigns. The full database download includes the LA.dat file needed for location processing.
-
-```bash
-# Copy LA.dat from the download to the container
-docker compose cp api:/app/temp_uls/LA.dat /tmp/LA.dat
-docker compose cp /tmp/LA.dat api:/data/LA.dat
-
-# Or if using bind mount, copy directly to your local directory
-# cp temp_uls/LA.dat ./LA.dat
-
-# Process location data (2-3 minutes)
-docker compose exec api /app/hamqrzdb-process --la-file /data/LA.dat --db /data/hamqrzdb.sqlite
-```
-
-You can also combine location processing with the full database build:
-
-```bash
-# Build database and process locations in one command
-docker compose exec api sh -c "/app/hamqrzdb-process --full --db /data/hamqrzdb.sqlite && /app/hamqrzdb-process --la-file /app/temp_uls/LA.dat --db /data/hamqrzdb.sqlite"
-```
+**That's it!** The database is persistent across container restarts. Location data (latitude, longitude, and grid squares) is automatically processed if LA.dat is included in the FCC download.
 
 ### Updating the Database
 
@@ -74,9 +51,6 @@ docker compose exec api sh -c "/app/hamqrzdb-process --full --db /data/hamqrzdb.
 # Daily updates (30 seconds)
 docker compose exec api /app/hamqrzdb-process --daily --db /data/hamqrzdb.sqlite
 
-# Full rebuild
+# Full rebuild (includes location data)
 docker compose exec api /app/hamqrzdb-process --full --db /data/hamqrzdb.sqlite
-
-# Update locations (monthly or as needed)
-docker compose exec api /app/hamqrzdb-process --la-file /data/LA.dat --db /data/hamqrzdb.sqlite
 ```
