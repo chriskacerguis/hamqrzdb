@@ -194,13 +194,14 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// handleCallsignLookup handles /v1/{callsign}/json/{app} requests
+// handleCallsignLookup handles /v1/{callsign}/json/{app} or /v1/{callsign}/json requests
 func handleCallsignLookup(w http.ResponseWriter, r *http.Request) {
-	// Parse URL path: /v1/{callsign}/json/{app}
+	// Parse URL path: /v1/{callsign}/json/{app} or /v1/{callsign}/json
 	path := strings.TrimPrefix(r.URL.Path, "/v1/")
 	parts := strings.Split(path, "/")
 
-	if len(parts) < 3 || parts[1] != "json" {
+	// Need at least callsign and "json"
+	if len(parts) < 2 || parts[1] != "json" {
 		writeNotFound(w, "INVALID_URL")
 		return
 	}
