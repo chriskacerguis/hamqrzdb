@@ -549,7 +549,7 @@ func (p *Processor) UpdateENData(filePath, filterCallsign string) error {
 		if filterCallsign != "" && !strings.EqualFold(callsign, filterCallsign) {
 			continue
 		}
-		
+
 		// Debug logging when filtering
 		if filterCallsign != "" {
 			log.Printf("Found matching EN record for %s", callsign)
