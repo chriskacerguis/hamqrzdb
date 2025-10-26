@@ -1,7 +1,8 @@
 services:
   api:
-    image: ghcr.io/chriskacerguis/hamqrzdb:${HAMQRZDB_IMAGE_TAG:-latest}
+    image: ghcr.io/chriskacerguis/hamqrzdb:latest
     restart: unless-stopped
+    pull_policy: always
     ports:
       - "80:8080"
     volumes:
