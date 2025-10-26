@@ -819,8 +819,8 @@ func (p *Processor) ProcessLAFile(laFile, filterCallsign string) error {
 
 	reader := csv.NewReader(file)
 	reader.Comma = '|'
-	reader.FieldsPerRecord = -1  // Variable number of fields
-	reader.LazyQuotes = true      // Allow malformed quotes
+	reader.FieldsPerRecord = -1 // Variable number of fields
+	reader.LazyQuotes = true    // Allow malformed quotes
 	reader.TrimLeadingSpace = true
 
 	updateStmt, err := p.db.db.Prepare(`
