@@ -140,8 +140,17 @@ tasks:
     desc: Build Docker image
     cmds:
       - echo "🐳 Building Docker image..."
-      - docker build -t hamqrzdb-api:latest .
+      - docker build -t ghcr.io/chriskacerguis/hamqrzdb:latest .
       - echo "✓ Docker image built"
+
+  docker:push:
+    desc: Push Docker image to GitHub Container Registry
+    deps:
+      - docker:build
+    cmds:
+      - echo "🐳 Pushing Docker image to GHCR..."
+      - docker push ghcr.io/chriskacerguis/hamqrzdb:latest
+      - echo "✓ Docker image pushed"
 
   docker:up:
     desc: Start services with Docker Compose

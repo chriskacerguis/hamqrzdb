@@ -386,14 +386,16 @@ func (p *Processor) LoadHDFile(filePath, filterCallsign string) error {
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`
-		INSERT INTO callsigns (callsign, license_status, radio_service_code, grant_date, expired_date, cancellation_date)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO callsigns (callsign, license_status, radio_service_code, grant_date, expired_date, cancellation_date, first_name, last_name)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(callsign) DO UPDATE SET
 			license_status = CASE WHEN excluded.license_status != '' THEN excluded.license_status ELSE callsigns.license_status END,
 			radio_service_code = CASE WHEN excluded.radio_service_code != '' THEN excluded.radio_service_code ELSE callsigns.radio_service_code END,
 			grant_date = CASE WHEN excluded.grant_date != '' THEN excluded.grant_date ELSE callsigns.grant_date END,
 			expired_date = CASE WHEN excluded.expired_date != '' THEN excluded.expired_date ELSE callsigns.expired_date END,
 			cancellation_date = CASE WHEN excluded.cancellation_date != '' THEN excluded.cancellation_date ELSE callsigns.cancellation_date END,
+			first_name = CASE WHEN excluded.first_name != '' THEN excluded.first_name ELSE callsigns.first_name END,
+			last_name = CASE WHEN excluded.last_name != '' THEN excluded.last_name ELSE callsigns.last_name END,
 			last_updated = CURRENT_TIMESTAMP
 	`)
 	if err != nil {
@@ -429,6 +431,8 @@ func (p *Processor) LoadHDFile(filePath, filterCallsign string) error {
 		grantDate := ""
 		expiredDate := ""
 		cancellationDate := ""
+		firstName := ""
+		lastName := ""
 		if len(row) > 5 {
 			licenseStatus = strings.TrimSpace(row[5])
 		}
@@ -444,7 +448,14 @@ func (p *Processor) LoadHDFile(filePath, filterCallsign string) error {
 		if len(row) > 9 {
 			cancellationDate = strings.TrimSpace(row[9])
 		}
-		if _, err := stmt.Exec(callsign, licenseStatus, radioServiceCode, grantDate, expiredDate, cancellationDate); err != nil {
+		// HD.dat also contains first/last name in fields 31 and 33 (0-indexed: 30 and 32)
+		if len(row) > 30 {
+			firstName = strings.TrimSpace(row[30])
+		}
+		if len(row) > 32 {
+			lastName = strings.TrimSpace(row[32])
+		}
+		if _, err := stmt.Exec(callsign, licenseStatus, radioServiceCode, grantDate, expiredDate, cancellationDate, firstName, lastName); err != nil {
 			log.Printf("Error inserting HD record: %v", err)
 			continue
 		}
@@ -504,16 +515,29 @@ func (p *Processor) UpdateENData(filePath, filterCallsign string) error {
 	defer stmt.Close()
 
 	count := 0
+	skipped := 0
+	totalRead := 0
 	for {
 		row, err := reader.Read()
+		totalRead++
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
+			if filterCallsign != "" {
+				log.Printf("CSV parse error (row skipped): %v", err)
+			}
+			skipped++
 			continue
 		}
 
 		if len(row) < 5 || row[0] != "EN" {
+			if filterCallsign != "" && len(row) >= 5 {
+				cs := strings.TrimSpace(row[4])
+				if strings.EqualFold(cs, filterCallsign) {
+					log.Printf("FILTERED: Found %s but row[0]=[%s] (expected EN)", cs, row[0])
+				}
+			}
 			continue
 		}
 
@@ -524,6 +548,14 @@ func (p *Processor) UpdateENData(filePath, filterCallsign string) error {
 
 		if filterCallsign != "" && !strings.EqualFold(callsign, filterCallsign) {
 			continue
+		}
+		
+		// Debug logging when filtering
+		if filterCallsign != "" {
+			log.Printf("Found matching EN record for %s", callsign)
+			log.Printf("  Row length: %d", len(row))
+			log.Printf("  Callsign field (row[4]): [%s]", row[4])
+			log.Printf("  After trim: [%s]", callsign)
 		}
 
 		entityName := ""
@@ -583,8 +615,13 @@ func (p *Processor) UpdateENData(filePath, filterCallsign string) error {
 
 		rowsAffected, _ := result.RowsAffected()
 		if rowsAffected == 0 {
-			log.Printf("Warning: EN update for %s matched 0 rows (callsign not found in database)", callsign)
+			if filterCallsign != "" {
+				log.Printf("Warning: EN update for %s matched 0 rows (callsign not found in database)", callsign)
+			}
 		} else {
+			if filterCallsign != "" {
+				log.Printf("Successfully updated EN record for %s (fname=%s, lname=%s, city=%s)", callsign, firstName, lastName, city)
+			}
 			count++
 		}
 
@@ -597,7 +634,7 @@ func (p *Processor) UpdateENData(filePath, filterCallsign string) error {
 		return err
 	}
 
-	log.Printf("Updated %d EN records", count)
+	log.Printf("Updated %d EN records (read %d total records, skipped %d)", count, totalRead-1, skipped)
 	return nil
 }
 
