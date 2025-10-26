@@ -6,7 +6,7 @@ This tool imports amateur radio license data from the UK Office of Communication
 
 - **Provider**: Ofcom (UK Office of Communications)
 - **URL**: https://www.ofcom.org.uk/manage-your-licence/radiocommunication-licences/amateur-radio/amateur-radio-licence-data
-- **Data File**: https://www.ofcom.org.uk/__data/assets/file/0027/201733/amateur-current.csv
+- **Data File**: https://www.ofcom.org.uk/siteassets/resources/documents/manage-your-licence/amateur/callsign-030625.csv?v=398262
 - **Format**: CSV (Comma-separated values)
 - **License**: Open Government Licence
 

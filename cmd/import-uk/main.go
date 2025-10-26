@@ -18,7 +18,7 @@ import (
 const (
 	// Ofcom Amateur Radio License data
 	// URL: https://www.ofcom.org.uk/manage-your-licence/radiocommunication-licences/amateur-radio/amateur-radio-licence-data
-	OfcomDataURL = "https://www.ofcom.org.uk/__data/assets/file/0027/201733/amateur-current.csv"
+	OfcomDataURL = "https://www.ofcom.org.uk/siteassets/resources/documents/manage-your-licence/amateur/callsign-030625.csv?v=398262"
 )
 
 var (
