@@ -147,20 +147,20 @@ tasks:
     desc: Start services with Docker Compose
     cmds:
       - echo "🐳 Starting services with Docker Compose..."
-      - docker-compose -f docker-compose.go.yml up -d
+      - docker compose up -d
       - echo "✓ Services started"
 
   docker:down:
     desc: Stop services
     cmds:
       - echo "🐳 Stopping services..."
-      - docker-compose -f docker-compose.go.yml down
+      - docker compose down
       - echo "✓ Services stopped"
 
   docker:logs:
     desc: View service logs
     cmds:
-      - docker-compose -f docker-compose.go.yml logs -f
+      - docker compose logs -f
 
   docker:restart:
     desc: Restart services
@@ -184,8 +184,6 @@ tasks:
     cmds:
       - echo "📡 Downloading and processing daily FCC updates..."
       - ./{{.BIN_DIR}}/{{.PROCESS_BINARY}} --daily --db hamqrzdb.sqlite
-
-
 
   db:stats:
     desc: Show database statistics
@@ -276,12 +274,6 @@ tasks:
         else
           echo "  ✗ {{.PROCESS_BINARY}} (not built)"
         fi
-      - |
-        if [ -f {{.BIN_DIR}}/{{.LOCATIONS_BINARY}} ]; then
-          echo "  ✓ {{.LOCATIONS_BINARY}}"
-        else
-          echo "  ✗ {{.LOCATIONS_BINARY}} (not built)"
-        fi
 
   help:
     desc: Show detailed help
@@ -294,27 +286,25 @@ tasks:
       - echo "  task install            - Install to /usr/local/bin"
       - echo ""
       - echo "Development"
-      - echo "  task dev api            - Run API server"
-      - echo "  task dev process        - Run data processor"
-      - echo "  task dev locations      - Run locations processor"
+      - echo "  task dev:api            - Run API server"
+      - echo "  task dev:process        - Run data processor"
       - echo ""
       - echo "Database"
-      - echo "  task db full            - Download and process full database"
-      - echo "  task db daily           - Download daily updates"
-      - echo "  task db locations       - Process location data"
-      - echo "  task db stats           - Show database statistics"
+      - echo "  task db:full            - Download and process full database"
+      - echo "  task db:daily           - Download daily updates"
+      - echo "  task db:stats           - Show database statistics"
       - echo ""
       - echo "Docker"
-      - echo "  task docker build       - Build Docker image"
-      - echo "  task docker up          - Start services"
-      - echo "  task docker down        - Stop services"
+      - echo "  task docker:build       - Build Docker image"
+      - echo "  task docker:up          - Start services"
+      - echo "  task docker:down        - Stop services"
       - echo ""
-      - echo "For all available tasks run task --list"
+      - echo "For all available tasks run 'task --list'"
       - echo ""
       - echo "Documentation"
-      - echo "  README.md        - Project overview"
-      - echo "  README.cli.md    - CLI tools reference"
-      - echo "  LOCATIONS.md     - Locations processor guide"
-      - echo "  QUICKREF.md      - Quick reference card"
+      - echo "  README.md               - Project overview"
+      - echo "  docs/README.cli.md      - CLI tools reference"
+      - echo "  docs/QUICKREF.md        - Quick reference card"
+      - echo "  docs/FCC-DATA-FORMAT.md - FCC file format reference"
       - echo ""
       - echo "73! 📻"
