@@ -23,7 +23,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o 
 # Final stage - minimal image
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates sqlite-libs wget
+RUN apk --no-cache add ca-certificates sqlite-libs wget bash
 
 WORKDIR /app
 
