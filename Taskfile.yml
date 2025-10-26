@@ -66,6 +66,24 @@ tasks:
       - rm -rf {{.BIN_DIR}}
       - echo "✓ Clean complete"
 
+  clean:data:
+    desc: Remove downloaded FCC data files
+    cmds:
+      - echo "🧹 Cleaning FCC data files..."
+      - rm -f *.dat
+      - rm -f l_amat.zip l_am_*.zip
+      - rm -rf l_amat/
+      - rm -rf temp_uls/
+      - echo "✓ Data files cleaned"
+
+  clean:all:
+    desc: Remove build artifacts and data files
+    deps:
+      - clean
+      - clean:data
+    cmds:
+      - echo "✓ Complete cleanup done"
+
   install:
     desc: Install binaries to /usr/local/bin
     deps:
