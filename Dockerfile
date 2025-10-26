@@ -20,6 +20,9 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o 
 # Build the process binary (now includes location processing)
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o hamqrzdb-process ./cmd/process/main.go
 
+# Build the UK importer binary
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o hamqrzdb-import-uk ./cmd/import-uk/main.go
+
 # Final stage - minimal image
 FROM alpine:latest
 
@@ -33,6 +36,7 @@ RUN mkdir -p /data
 # Copy binaries from builder
 COPY --from=builder /build/hamqrzdb-api .
 COPY --from=builder /build/hamqrzdb-process .
+COPY --from=builder /build/hamqrzdb-import-uk .
 
 # Copy the index.html file
 COPY html/index.html /app/index.html

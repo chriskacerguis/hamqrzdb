@@ -45,6 +45,75 @@ curl http://localhost:8080/v1/kj5djc/json/test
 
 **That's it!** The database is persistent across container restarts. Location data (latitude, longitude, and grid squares) is automatically processed if LA.dat is included in the FCC download.
 
+### Docker Compose Commands
+
+#### Database Management
+
+```bash
+# Populate database with FCC data (first time, 3-5 minutes)
+docker compose exec api /app/hamqrzdb-process --full --db /data/hamqrzdb.sqlite
+
+# Daily updates (30 seconds)
+docker compose exec api /app/hamqrzdb-process --daily --db /data/hamqrzdb.sqlite
+
+# Import UK amateur radio data (Ofcom)
+docker compose exec api /app/hamqrzdb-import-uk --db /data/hamqrzdb.sqlite
+```
+
+#### Database Inspection
+
+```bash
+# Check total callsign count
+docker compose exec api sqlite3 /data/hamqrzdb.sqlite "SELECT COUNT(*) FROM callsigns"
+
+# Check active licenses
+docker compose exec api sqlite3 /data/hamqrzdb.sqlite "SELECT COUNT(*) FROM callsigns WHERE license_status = 'A'"
+
+# Look up a specific callsign
+docker compose exec api sqlite3 /data/hamqrzdb.sqlite "SELECT callsign, first_name, last_name, city, state FROM callsigns WHERE callsign = 'KJ5DJC'"
+
+# Check UK callsigns
+docker compose exec api sqlite3 /data/hamqrzdb.sqlite "SELECT COUNT(*) FROM callsigns WHERE radio_service_code = 'UK'"
+
+# Interactive SQLite shell
+docker compose exec api sqlite3 /data/hamqrzdb.sqlite
+```
+
+#### Container Management
+
+```bash
+# View logs
+docker compose logs -f api
+
+# Check container health
+docker compose ps
+
+# Restart the API (keeps database)
+docker compose restart api
+
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (deletes database!)
+docker compose down -v
+```
+
+#### Troubleshooting
+
+```bash
+# Open shell inside container
+docker compose exec api sh
+
+# Check files in data directory
+docker compose exec api ls -lh /data/
+
+# View database schema
+docker compose exec api sqlite3 /data/hamqrzdb.sqlite ".schema callsigns"
+
+# Check database integrity
+docker compose exec api sqlite3 /data/hamqrzdb.sqlite "PRAGMA integrity_check"
+```
+
 ### Updating the Database
 
 ```bash
