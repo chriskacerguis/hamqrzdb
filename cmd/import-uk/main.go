@@ -104,6 +104,16 @@ func DownloadFile(url, filepath string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		// Provide helpful error message for Cloudflare 403
+		if resp.StatusCode == http.StatusForbidden {
+			return fmt.Errorf("download blocked (403 Forbidden) - likely Cloudflare protection.\n\n"+
+				"To import UK data manually:\n"+
+				"1. Download the CSV file in your browser from:\n"+
+				"   %s\n"+
+				"2. Run this command with the downloaded file:\n"+
+				"   %s --file /path/to/callsign-030625.csv --download=false --db %s",
+				url, os.Args[0], *dbFlag)
+		}
 		return fmt.Errorf("bad status: %s (status code: %d)", resp.Status, resp.StatusCode)
 	}
 

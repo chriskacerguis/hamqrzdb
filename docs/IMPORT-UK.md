@@ -38,15 +38,29 @@ task build
 
 ### Run
 
+**Note**: Ofcom's website uses Cloudflare protection which may block automated downloads with a 403 error. If automatic download fails, use the manual method below.
+
+#### Automatic Download (may be blocked by Cloudflare)
+
 ```bash
 # Download and import latest UK data
 ./bin/hamqrzdb-import-uk --db hamqrzdb.sqlite
 
-# Use a local CSV file
-./bin/hamqrzdb-import-uk --db hamqrzdb.sqlite --file amateur-current.csv --download=false
-
 # Using task
 task db:import-uk
+```
+
+#### Manual Download (recommended if automatic fails)
+
+```bash
+# 1. Download the CSV file in your browser from:
+#    https://www.ofcom.org.uk/siteassets/resources/documents/manage-your-licence/amateur/callsign-030625.csv?v=398262
+
+# 2. Import the downloaded file
+./bin/hamqrzdb-import-uk --db hamqrzdb.sqlite --file /path/to/callsign-030625.csv --download=false
+
+# With Docker Compose
+docker compose exec api /app/hamqrzdb-import-uk --db /data/hamqrzdb.sqlite --file /data/callsign-030625.csv --download=false
 ```
 
 ### Command-line Flags

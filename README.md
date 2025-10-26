@@ -57,7 +57,14 @@ docker compose exec api /app/hamqrzdb-import-us --full --db /data/hamqrzdb.sqlit
 docker compose exec api /app/hamqrzdb-import-us --daily --db /data/hamqrzdb.sqlite
 
 # Import UK amateur radio data (Ofcom)
+# Note: May fail with 403 due to Cloudflare protection
+# If it fails, download the CSV manually in your browser and use --file flag
 docker compose exec api /app/hamqrzdb-import-uk --db /data/hamqrzdb.sqlite
+
+# Import UK data from manually downloaded CSV file
+# 1. Download: https://www.ofcom.org.uk/siteassets/resources/documents/manage-your-licence/amateur/callsign-030625.csv
+# 2. Copy to container volume or use --file flag
+docker compose exec api /app/hamqrzdb-import-uk --db /data/hamqrzdb.sqlite --file /data/callsign-030625.csv --download=false
 ```
 
 #### Database Inspection
