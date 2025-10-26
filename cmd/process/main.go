@@ -564,7 +564,7 @@ func (p *Processor) UpdateENData(filePath, filterCallsign string) error {
 			zipCode = strings.TrimSpace(row[18])
 		}
 
-		if _, err := stmt.Exec(
+		result, err := stmt.Exec(
 			entityName, entityName,
 			firstName, firstName,
 			mi, mi,
@@ -575,13 +575,20 @@ func (p *Processor) UpdateENData(filePath, filterCallsign string) error {
 			state, state,
 			zipCode, zipCode,
 			callsign,
-		); err != nil {
-			log.Printf("Error updating EN record: %v", err)
+		)
+		if err != nil {
+			log.Printf("Error updating EN record for %s: %v", callsign, err)
 			continue
 		}
 
-		count++
-		if count%10000 == 0 {
+		rowsAffected, _ := result.RowsAffected()
+		if rowsAffected == 0 {
+			log.Printf("Warning: EN update for %s matched 0 rows (callsign not found in database)", callsign)
+		} else {
+			count++
+		}
+
+		if count%10000 == 0 && count > 0 {
 			log.Printf("  Updated %d EN records...", count)
 		}
 	}
@@ -820,7 +827,7 @@ func (p *Processor) ProcessLAFile(laFile, filterCallsign string) error {
 		    longitude = ?,
 		    grid_square = ?,
 		    last_updated = CURRENT_TIMESTAMP
-		WHERE call = ?
+		WHERE callsign = ?
 	`)
 	if err != nil {
 		return fmt.Errorf("failed to prepare update statement: %w", err)

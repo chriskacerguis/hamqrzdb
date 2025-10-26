@@ -36,6 +36,9 @@ temp_uls/
 # Downloaded FCC data
 l_amat.zip
 l_am_*.zip
+l_amat/
+
+counts
 
 # Logs
 logs/
