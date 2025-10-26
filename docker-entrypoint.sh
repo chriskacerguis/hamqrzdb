@@ -42,14 +42,14 @@ EOF
     
     echo "✅ Empty database created!"
     echo "📥 To populate with FCC data, run:"
-    echo "   docker compose exec api /app/hamqrzdb-process --full --db $DB_PATH"
+    echo "   docker compose exec api /app/hamqrzdb-import-us --full --db $DB_PATH"
 else
     # Count records to verify database
     RECORD_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM callsigns;" 2>/dev/null || echo "0")
     if [ "$RECORD_COUNT" -eq "0" ]; then
         echo "⚠️  Database exists but is empty (0 callsigns)"
         echo "📥 To populate with FCC data, run:"
-        echo "   docker compose exec api /app/hamqrzdb-process --full --db $DB_PATH"
+        echo "   docker compose exec api /app/hamqrzdb-import-us --full --db $DB_PATH"
     else
         echo "📊 Database found with $RECORD_COUNT callsigns"
     fi

@@ -3,7 +3,7 @@ version: '3'
 vars:
   BIN_DIR: bin
   API_BINARY: hamqrzdb-api
-  PROCESS_BINARY: hamqrzdb-process
+  IMPORT_US_BINARY: hamqrzdb-import-us
   IMPORT_UK_BINARY: hamqrzdb-import-uk
   CGO_ENABLED: 1
   GOFLAGS: -ldflags="-s -w"
@@ -18,7 +18,7 @@ tasks:
     desc: Build all CLI tools
     deps:
       - build:api
-      - build:process
+      - build:import-us
       - build:import-uk
     cmds:
       - echo "✅ Build complete!"
@@ -36,17 +36,17 @@ tasks:
       - CGO_ENABLED={{.CGO_ENABLED}} go build {{.GOFLAGS}} -o {{.BIN_DIR}}/{{.API_BINARY}} main.go
       - echo "✓ Built {{.BIN_DIR}}/{{.API_BINARY}}"
 
-  build:process:
-    desc: Build data processor
+  build:import-us:
+    desc: Build US data importer (FCC ULS)
     sources:
-      - cmd/process/main.go
+      - cmd/import-us/main.go
     generates:
-      - "{{.BIN_DIR}}/{{.PROCESS_BINARY}}"
+      - "{{.BIN_DIR}}/{{.IMPORT_US_BINARY}}"
     cmds:
-      - echo "🔨 Building {{.PROCESS_BINARY}}..."
+      - echo "🔨 Building {{.IMPORT_US_BINARY}}..."
       - mkdir -p {{.BIN_DIR}}
-      - CGO_ENABLED={{.CGO_ENABLED}} go build {{.GOFLAGS}} -o {{.BIN_DIR}}/{{.PROCESS_BINARY}} cmd/process/main.go
-      - echo "✓ Built {{.BIN_DIR}}/{{.PROCESS_BINARY}}"
+      - CGO_ENABLED={{.CGO_ENABLED}} go build {{.GOFLAGS}} -o {{.BIN_DIR}}/{{.IMPORT_US_BINARY}} cmd/import-us/main.go
+      - echo "✓ Built {{.BIN_DIR}}/{{.IMPORT_US_BINARY}}"
 
   build:import-uk:
     desc: Build UK data importer
@@ -92,16 +92,16 @@ tasks:
     cmds:
       - echo "📦 Installing binaries to /usr/local/bin..."
       - sudo cp {{.BIN_DIR}}/{{.API_BINARY}} /usr/local/bin/
-      - sudo cp {{.BIN_DIR}}/{{.PROCESS_BINARY}} /usr/local/bin/
+      - sudo cp {{.BIN_DIR}}/{{.IMPORT_US_BINARY}} /usr/local/bin/
       - sudo cp {{.BIN_DIR}}/{{.IMPORT_UK_BINARY}} /usr/local/bin/
-      - echo "✓ Installed {{.API_BINARY}}, {{.PROCESS_BINARY}}, and {{.IMPORT_UK_BINARY}}"
+      - echo "✓ Installed {{.API_BINARY}}, {{.IMPORT_US_BINARY}}, and {{.IMPORT_UK_BINARY}}"
 
   uninstall:
     desc: Remove binaries from /usr/local/bin
     cmds:
       - echo "🗑️  Uninstalling binaries from /usr/local/bin..."
       - sudo rm -f /usr/local/bin/{{.API_BINARY}}
-      - sudo rm -f /usr/local/bin/{{.PROCESS_BINARY}}
+      - sudo rm -f /usr/local/bin/{{.IMPORT_US_BINARY}}
       - sudo rm -f /usr/local/bin/{{.IMPORT_UK_BINARY}}
       - echo "✓ Uninstalled"
 
@@ -132,11 +132,11 @@ tasks:
       - echo "🚀 Starting API server in development mode..."
       - DB_PATH=./hamqrzdb.sqlite PORT=8080 go run main.go
 
-  dev:process:
-    desc: Run data processor in development mode
+  dev:import-us:
+    desc: Run US data importer in development mode
     cmds:
-      - echo "🚀 Running data processor..."
-      - go run cmd/process/main.go {{.CLI_ARGS}}
+      - echo "🚀 Running US importer..."
+      - go run cmd/import-us/main.go {{.CLI_ARGS}}
 
   dev:import-uk:
     desc: Run UK importer in development mode
@@ -190,18 +190,18 @@ tasks:
   db:full:
     desc: Download and process full FCC database
     deps:
-      - build:process
+      - build:import-us
     cmds:
       - echo "📡 Downloading and processing full FCC database..."
-      - ./{{.BIN_DIR}}/{{.PROCESS_BINARY}} --full --db hamqrzdb.sqlite
+      - ./{{.BIN_DIR}}/{{.IMPORT_US_BINARY}} --full --db hamqrzdb.sqlite
 
   db:daily:
     desc: Download and process daily FCC updates
     deps:
-      - build:process
+      - build:import-us
     cmds:
       - echo "📡 Downloading and processing daily FCC updates..."
-      - ./{{.BIN_DIR}}/{{.PROCESS_BINARY}} --daily --db hamqrzdb.sqlite
+      - ./{{.BIN_DIR}}/{{.IMPORT_US_BINARY}} --daily --db hamqrzdb.sqlite
 
   db:import-uk:
     desc: Import UK Ofcom amateur radio data

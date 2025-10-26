@@ -37,7 +37,7 @@ EOF
 docker compose up -d
 
 # 3. Populate the database with FCC data (3-5 minutes, one-time, includes location data)
-docker compose exec api /app/hamqrzdb-process --full --db /data/hamqrzdb.sqlite
+docker compose exec api /app/hamqrzdb-import-us --full --db /data/hamqrzdb.sqlite
 
 # 4. Test the API
 curl http://localhost:8080/v1/kj5djc/json/test
@@ -51,10 +51,10 @@ curl http://localhost:8080/v1/kj5djc/json/test
 
 ```bash
 # Populate database with FCC data (first time, 3-5 minutes)
-docker compose exec api /app/hamqrzdb-process --full --db /data/hamqrzdb.sqlite
+docker compose exec api /app/hamqrzdb-import-us --full --db /data/hamqrzdb.sqlite
 
 # Daily updates (30 seconds)
-docker compose exec api /app/hamqrzdb-process --daily --db /data/hamqrzdb.sqlite
+docker compose exec api /app/hamqrzdb-import-us --daily --db /data/hamqrzdb.sqlite
 
 # Import UK amateur radio data (Ofcom)
 docker compose exec api /app/hamqrzdb-import-uk --db /data/hamqrzdb.sqlite
@@ -118,8 +118,8 @@ docker compose exec api sqlite3 /data/hamqrzdb.sqlite "PRAGMA integrity_check"
 
 ```bash
 # Daily updates (30 seconds)
-docker compose exec api /app/hamqrzdb-process --daily --db /data/hamqrzdb.sqlite
+docker compose exec api /app/hamqrzdb-import-us --daily --db /data/hamqrzdb.sqlite
 
 # Full rebuild (includes location data)
-docker compose exec api /app/hamqrzdb-process --full --db /data/hamqrzdb.sqlite
+docker compose exec api /app/hamqrzdb-import-us --full --db /data/hamqrzdb.sqlite
 ```

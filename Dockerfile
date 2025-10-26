@@ -17,8 +17,8 @@ COPY cmd/ ./cmd/
 # Build the API binary with CGO enabled (required for go-sqlite3)
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o hamqrzdb-api .
 
-# Build the process binary (now includes location processing)
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o hamqrzdb-process ./cmd/process/main.go
+# Build the US importer binary (FCC ULS data)
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o hamqrzdb-import-us ./cmd/import-us/main.go
 
 # Build the UK importer binary
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o hamqrzdb-import-uk ./cmd/import-uk/main.go
@@ -35,7 +35,7 @@ RUN mkdir -p /data
 
 # Copy binaries from builder
 COPY --from=builder /build/hamqrzdb-api .
-COPY --from=builder /build/hamqrzdb-process .
+COPY --from=builder /build/hamqrzdb-import-us .
 COPY --from=builder /build/hamqrzdb-import-uk .
 
 # Copy the index.html file
